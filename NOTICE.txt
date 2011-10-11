@@ -1,0 +1,31 @@
+==============================================================
+ Jetty Web Container 
+ Copyright 1995-2010 Mort Bay Consulting Pty Ltd
+==============================================================
+
+The Jetty Web Container is Copyright Mort Bay Consulting Pty Ltd
+unless otherwise noted. 
+
+The core org.eclipse.jetty packages are dual licenses under the 
+apache 2.0 licnese and the eclipse 1.0 and may be may be distributed 
+under either license.
+
+The org.mortbay.jetty packages are licenses under the 
+apache 2.0 license.
+
+Some portions of the code are Copyright:
+  2006 Tim Vernum 
+  1999 Jason Gilbert.
+
+The jboss integration module contains some LGPL code.
+
+The win32 Java Service Wrapper (v3.2.3) is Copyright (c) 1999, 2006 
+Tanuki Software, Inc.  and 2001 Silver Egg Technology.  It is 
+covered by an open license which is viewable at
+http://svn.codehaus.org/jetty/jetty/trunk/jetty-win32/LICENSE.txt
+
+The Atomikos binary jars in the repository module are licensed under
+the Apache 2 License and are copyright Atomikos.
+
+The jetty-setuid module uses https://jna.dev.java.net/ which
+is licensed with LGPL
