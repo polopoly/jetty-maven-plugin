@@ -1,9 +1,4 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <parent>
-    <groupId>org.mortbay.jetty</groupId>
-    <artifactId>jetty-integration-project</artifactId>
-    <version>7.4.5.v20110725</version>
-  </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.polopoly.jetty</groupId>
   <artifactId>jetty-maven-plugin</artifactId>
@@ -13,6 +8,8 @@
   <properties>
     <mavenVersion>3.0.3</mavenVersion>
     <pluginToolsVersion>2.5.1</pluginToolsVersion>
+    <jetty-version>7.4.5.v20110725</jetty-version>
+    <jsp-2-1-version>2.1.v20100127</jsp-2-1-version>
   </properties>
 
   <scm>
