@@ -5,15 +5,29 @@
     <version>7.4.5.v20110725</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.mortbay.jetty</groupId>
+  <groupId>com.polopoly.jetty</groupId>
   <artifactId>jetty-maven-plugin</artifactId>
-  <version>7.4.5-polopoly-0.2</version>
+  <version>7.4.5-polopoly-0.3-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
-  <name>Jetty :: Jetty Maven Plugin</name>
+  <name>Jetty Maven Plugin with multi context support</name>
   <properties>
     <mavenVersion>3.0.3</mavenVersion>
     <pluginToolsVersion>2.5.1</pluginToolsVersion>
   </properties>
+
+  <scm>
+    <connection>scm:git:git://github.com/polopoly/jetty-maven-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:polopoly/jetty-maven-plugin.git</developerConnection>
+  </scm>
+
+  <distributionManagement>
+    <repository>
+      <id>polopoly-product</id>
+      <name>Polopoly Product</name>
+      <url>http://maven.polopoly.com/nexus/content/repositories/polopoly-product</url>
+    </repository>
+  </distributionManagement>
+
   <build>
     <plugins>
       <plugin>
