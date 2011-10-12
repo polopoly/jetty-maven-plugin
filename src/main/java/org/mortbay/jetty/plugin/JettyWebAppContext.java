@@ -4,7 +4,7 @@
 //------------------------------------------------------------------------
 //Licensed under the Apache License, Version 2.0 (the "License");
 //you may not use this file except in compliance with the License.
-//You may obtain a copy of the License at 
+//You may obtain a copy of the License at
 //http://www.apache.org/licenses/LICENSE-2.0
 //Unless required by applicable law or agreed to in writing, software
 //distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,14 +19,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.eclipse.jetty.annotations.AnnotationConfiguration;
 import org.eclipse.jetty.plus.webapp.EnvConfiguration;
 import org.eclipse.jetty.util.URIUtil;
 import org.eclipse.jetty.util.log.Log;
@@ -39,18 +38,17 @@ import org.eclipse.jetty.webapp.MetaInfConfiguration;
 import org.eclipse.jetty.webapp.TagLibConfiguration;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.eclipse.jetty.webapp.WebXmlConfiguration;
-import org.eclipse.jetty.annotations.AnnotationConfiguration;
 
 /**
  * JettyWebAppContext
- * 
+ *
  * Extends the WebAppContext to specialize for the maven environment.
  * We pass in the list of files that should form the classpath for
  * the webapp when executing in the plugin, and any jetty-env.xml file
  * that may have been configured.
- *
  */
-public class JettyWebAppContext extends WebAppContext
+public class JettyWebAppContext
+    extends WebAppContext
 {
     private static final String WEB_INF_CLASSES_PREFIX = "/WEB-INF/classes";
     private static final String WEB_INF_LIB_PREFIX = "/WEB-INF/lib";
@@ -64,10 +62,12 @@ public class JettyWebAppContext extends WebAppContext
     private List<Resource> overlays;
     private boolean unpackOverlays;
 
+    private ArtifactData warArtifact;
+
     public JettyWebAppContext ()
-    throws Exception
+        throws Exception
     {
-        super();   
+        super();
         setConfigurations(new Configuration[]{
                 new MavenWebInfConfiguration(),
                 new WebXmlConfiguration(),
@@ -80,7 +80,7 @@ public class JettyWebAppContext extends WebAppContext
                 new TagLibConfiguration()
         });
     }
-    
+
     public boolean getUnpackOverlays()
     {
         return unpackOverlays;
@@ -90,7 +90,17 @@ public class JettyWebAppContext extends WebAppContext
     {
         this.unpackOverlays = unpackOverlays;
     }
-    
+
+    public void setWarArtifact(ArtifactData warArtifact)
+    {
+        this.warArtifact = warArtifact;
+    }
+
+    public ArtifactData getWarArtifact()
+    {
+        return warArtifact;
+    }
+
     public void setClassPathFiles(List<File> classpathFiles)
     {
         this.classpathFiles = classpathFiles;
@@ -100,46 +110,46 @@ public class JettyWebAppContext extends WebAppContext
     {
         return this.classpathFiles;
     }
-    
+
     public void setOverlays (List<Resource> overlays)
     {
         this.overlays = overlays;
     }
-    
+
     public List<Resource> getOverlays ()
     {
         return this.overlays;
     }
-    
+
     public void setJettyEnvXml (String jettyEnvXml)
     {
         this.jettyEnvXml = jettyEnvXml;
     }
-    
+
     public String getJettyEnvXml()
     {
         return this.jettyEnvXml;
     }
 
-   
+
     public void setWebInfClasses(List<File> dirs)
     {
         webInfClasses.addAll(dirs);
     }
-    
+
     public List<File> getWebInfClasses()
     {
         return webInfClasses;
     }
-    
+
     public void setWebInfLib (List<File> jars)
     {
         webInfJars.addAll(jars);
     }
-    
+
     /* ------------------------------------------------------------ */
     /**
-     * This method is provided as a conveniance for jetty maven plugin configuration 
+     * This method is provided as a conveniance for jetty maven plugin configuration
      * @param resourceBases Array of resources strings to set as a {@link ResourceCollection}. Each resource string may be a comma separated list of resources
      * @see Resource
      */
@@ -152,7 +162,7 @@ public class JettyWebAppContext extends WebAppContext
             for (String r:rs)
                 resources.add(r);
         }
-        
+
         setBaseResource(new ResourceCollection(resources.toArray(new String[resources.size()])));
     }
 
@@ -178,9 +188,9 @@ public class JettyWebAppContext extends WebAppContext
         setShutdown(false);
         super.doStart();
     }
-     
+
     public void doStop () throws Exception
-    { 
+    {
         setShutdown(true);
         //just wait a little while to ensure no requests are still being processed
         Thread.currentThread().sleep(500L);
@@ -212,7 +222,7 @@ public class JettyWebAppContext extends WebAppContext
                         res = Resource.newResource(newPath);
                         if (!res.exists())
                         {
-                            res = null; 
+                            res = null;
                             i++;
                         }
                     }
@@ -223,9 +233,9 @@ public class JettyWebAppContext extends WebAppContext
                 else if (uri.startsWith(WEB_INF_LIB_PREFIX))
                 {
                     String jarName = uri.replace(WEB_INF_LIB_PREFIX, "");
-                    if (jarName.startsWith("/") || jarName.startsWith("\\")) 
+                    if (jarName.startsWith("/") || jarName.startsWith("\\"))
                         jarName = jarName.substring(1);
-                    if (jarName.length()==0) 
+                    if (jarName.length()==0)
                         return null;
                     File jarFile = webInfJarMap.get(jarName);
                     if (jarFile != null)
@@ -268,7 +278,7 @@ public class JettyWebAppContext extends WebAppContext
             else if (path.startsWith(WEB_INF_CLASSES_PREFIX))
             {
                 int i=0;
-               
+
                 while (paths.isEmpty() && (i < webInfClasses.size()))
                 {
                     String newPath = path.replace(WEB_INF_CLASSES_PREFIX, webInfClasses.get(i).getPath());
