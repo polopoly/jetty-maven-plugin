@@ -38,7 +38,7 @@ public class JettyAggregatedRunMojo
     * List of other contexts to set up. Optional.
     * @parameter
     */
-    private ContextHandler[] contextHandlers;
+    private ContextHandler[] externalArtifactContextHandlers;
 
     /**
      * @parameter expression="${session}"
@@ -148,7 +148,7 @@ public class JettyAggregatedRunMojo
             }
         }
 
-        if (contextHandlers != null) {
+        if (externalArtifactContextHandlers != null) {
             configureWarArtifactsForExtraContextHandlers();
         }
     }
@@ -156,7 +156,7 @@ public class JettyAggregatedRunMojo
     private void configureWarArtifactsForExtraContextHandlers()
         throws Exception
     {
-        for (Handler contextHandler : contextHandlers) {
+        for (Handler contextHandler : externalArtifactContextHandlers) {
             if (contextHandler instanceof JettyWebAppContext) {
                 JettyWebAppContext jettyContext = (JettyWebAppContext) contextHandler;
 

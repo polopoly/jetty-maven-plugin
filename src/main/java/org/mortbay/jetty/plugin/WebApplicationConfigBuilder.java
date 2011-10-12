@@ -28,7 +28,7 @@ public class WebApplicationConfigBuilder {
     {
         JettyWebAppContext webAppConfig = new JettyWebAppContext();
 
-        Plugin plugin = project.getPlugin("org.mortbay.jetty:jetty-maven-plugin");
+        Plugin plugin = project.getPlugin("com.polopoly.jetty:jetty-maven-plugin");
         Xpp3Dom config = (Xpp3Dom) plugin.getConfiguration();
         applyPOMWebAppConfig(config, webAppConfig);
 
