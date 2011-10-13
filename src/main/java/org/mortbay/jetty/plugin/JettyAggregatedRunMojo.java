@@ -163,10 +163,15 @@ public class JettyAggregatedRunMojo
                 ArtifactData warArtifact = jettyContext.getWarArtifact();
 
                 if (warArtifact != null) {
-                    Artifact artifact = artifactFactory.createArtifact(warArtifact.groupId, warArtifact.artifactId, warArtifact.version, warArtifact.scope, warArtifact.type);
-                    resolver.resolve(artifact, remoteRepositories, localRepository);
-                    File warFile = artifact.getFile();
+                    Artifact artifact = artifactFactory.createArtifact(warArtifact.groupId,
+                                                                       warArtifact.artifactId,
+                                                                       warArtifact.version,
+                                                                       warArtifact.scope,
+                                                                       warArtifact.type);
 
+                    resolver.resolve(artifact, remoteRepositories, localRepository);
+
+                    File warFile = artifact.getFile();
                     jettyContext.setWar(warFile.getAbsolutePath());
 
                     getServer().addHandler(jettyContext);

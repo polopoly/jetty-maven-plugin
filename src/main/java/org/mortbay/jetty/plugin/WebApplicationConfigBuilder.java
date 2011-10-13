@@ -1,5 +1,11 @@
 package org.mortbay.jetty.plugin;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.configuration.BeanConfigurationException;
 import org.apache.maven.configuration.BeanConfigurationRequest;
@@ -12,19 +18,17 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.eclipse.jetty.util.resource.Resource;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 /**
  * Created by bitter on 2011-08-31
  */
-public class WebApplicationConfigBuilder {
+public class WebApplicationConfigBuilder
+{
+    private static final Logger LOG = Logger.getLogger(WebApplicationConfigBuilder.class.getName());
 
     BeanConfigurator beanConfigurator = new DefaultBeanConfigurator();
 
-    public JettyWebAppContext configureWebApplication(MavenProject project, Log log) throws Exception
+    public JettyWebAppContext configureWebApplication(MavenProject project, Log log)
+        throws Exception
     {
         JettyWebAppContext webAppConfig = new JettyWebAppContext();
 
@@ -41,11 +45,13 @@ public class WebApplicationConfigBuilder {
         final File classesDirectory = new File(baseDir, "target/classes");
 
         Resource webAppSourceDirectoryResource = Resource.newResource(webAppSourceDirectory.getCanonicalPath());
-        if (webAppConfig.getWar() == null)
+        if (webAppConfig.getWar() == null) {
             webAppConfig.setWar(webAppSourceDirectoryResource.toString());
+        }
 
-        if (webAppConfig.getBaseResource() == null)
+        if (webAppConfig.getBaseResource() == null) {
             webAppConfig.setBaseResource(webAppSourceDirectoryResource);
+        }
 
         webAppConfig.setWebInfClasses(new ArrayList<File>() {{ add(classesDirectory); }});
         addDependencies(project, webAppConfig);
@@ -73,37 +79,55 @@ public class WebApplicationConfigBuilder {
                 }
             }
         }
+
         return webAppConfig;
     }
 
-    private void applyPOMWebAppConfig(Xpp3Dom configuration, JettyWebAppContext webAppConfig)
-            throws BeanConfigurationException
+    private void applyPOMWebAppConfig(final Xpp3Dom configuration,
+                                      final JettyWebAppContext webAppConfig)
+        throws BeanConfigurationException
     {
         BeanConfigurationRequest beanConfigurationRequest = new DefaultBeanConfigurationRequest();
         beanConfigurationRequest.setBean(webAppConfig).setConfiguration(configuration.getChild("webAppConfig"));
         beanConfigurator.configureBean(beanConfigurationRequest);
     }
 
-    private void addDependencies(MavenProject project, JettyWebAppContext webAppConfig)
+    private void addDependencies(final MavenProject project,
+                                 final JettyWebAppContext webAppConfig)
         throws Exception
     {
         List<File> dependencyFiles = new ArrayList<File>();
         List<Resource> overlays = new ArrayList<Resource>();
+
         for (Artifact artifact : project.getArtifacts())
         {
-            if(artifact.getType().equals("war")) {
+            if (artifact.getType().equals("war")) {
                 overlays.add(Resource.newResource("jar:"+artifact.getFile().toURL().toString()+"!/"));
             } else if ((!Artifact.SCOPE_PROVIDED.equals(artifact.getScope()))
                     && (!Artifact.SCOPE_TEST.equals( artifact.getScope())))
             {
+                File dependencyFile = artifact.getFile();
+
+                if (dependencyFile == null || !dependencyFile.exists()) {
+                    String coordinates = String.format("%s:%s:%s",
+                                                       artifact.getGroupId(),
+                                                       artifact.getArtifactId(),
+                                                       artifact.getVersion());
+
+                    LOG.log(Level.WARNING, "Dependency '" + coordinates + "' does not exist in repository. Skipping!");
+                    continue;
+                }
+
                 dependencyFiles.add(artifact.getFile());
             }
         }
+
         webAppConfig.setOverlays(overlays);
         webAppConfig.setWebInfLib(dependencyFiles);
     }
 
-    public String toInfoString(JettyWebAppContext webAppConfig) {
+    public String toInfoString(JettyWebAppContext webAppConfig)
+    {
         return String.format("Context path   : %s"
                 + "\nWork directory : %s"
                 + "\nWeb defaults   : %s"
@@ -118,5 +142,5 @@ public class WebApplicationConfigBuilder {
                 (webAppConfig.getWar()                 == null ? "none" : webAppConfig.getWar()),
                 (webAppConfig.getWebInfClasses()       == null ? "none" : webAppConfig.getWebInfClasses()),
                 (webAppConfig.getDescriptor()          == null ? "none" : webAppConfig.getDescriptor()));
-    };
+    }
 }
