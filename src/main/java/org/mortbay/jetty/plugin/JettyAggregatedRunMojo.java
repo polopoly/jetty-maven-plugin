@@ -1,9 +1,12 @@
 package org.mortbay.jetty.plugin;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,12 +29,11 @@ import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.Scanner;
 
 /**
- * Created by bitter on 2011-08-31
+ * Runs embedded jetty and deploys war submodules
  *
  * @aggregator
  * @goal run-all
  * @requiresDependencyResolution runtime
- * @description Runs embedded jetty and deploys war submodules
  */
 public class JettyAggregatedRunMojo
     extends AbstractEmbeddedJettyMojo
@@ -48,10 +50,18 @@ public class JettyAggregatedRunMojo
     private ContextHandler[] externalArtifactContextHandlers;
     
     /**
-     * java util logging properties
+     * Configure java util logging properties. This parameter has precedence 
+     * over parameter loggingPropertiesFile.
      * @parameter
      */
     private Properties loggingProperties = new Properties();
+    
+    /**
+     * Configure java util logging via logging properties file. It may be 
+     * overridden by parameter loggingProperties.
+     * @parameter expression="${loggingProperties.file}"
+     */
+    private File loggingPropertiesFile;
 
     /**
      * @parameter expression="${session}"
@@ -95,9 +105,18 @@ public class JettyAggregatedRunMojo
 
     private void applyLoggingProperties() throws MojoFailureException {
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            loggingProperties.store(baos, "Logging properties");
-            LogManager.getLogManager().readConfiguration(new ByteArrayInputStream(baos.toByteArray()));
+            InputStream is;
+            if (!loggingProperties.isEmpty()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                loggingProperties.store(baos, "Logging properties");
+                is = new ByteArrayInputStream(baos.toByteArray());
+                LogManager.getLogManager().readConfiguration(is);
+                
+            } else if (loggingPropertiesFile != null) {
+                is = new BufferedInputStream(new FileInputStream(loggingPropertiesFile));
+                LogManager.getLogManager().readConfiguration(is);
+            }
+            
         } catch (IOException e) {
             throw new MojoFailureException("Unable to apply logging properties", e);
         }
