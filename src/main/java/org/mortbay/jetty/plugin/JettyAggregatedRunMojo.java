@@ -109,6 +109,10 @@ public class JettyAggregatedRunMojo
     {
         scanners.clear();
 
+        if (externalArtifactContextHandlers != null) {
+            configureWarArtifactsForExtraContextHandlers();
+        }
+
         for (MavenProject subProject : session.getProjects()) {
             if ("war".equals(subProject.getPackaging())) {
                 final JettyWebAppContext webAppConfig = configBuilder.configureWebApplication(subProject, getLog());
@@ -177,10 +181,6 @@ public class JettyAggregatedRunMojo
             }
         }
         getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
-
-        if (externalArtifactContextHandlers != null) {
-            configureWarArtifactsForExtraContextHandlers();
-        }
     }
 
     private void configureWarArtifactsForExtraContextHandlers()
