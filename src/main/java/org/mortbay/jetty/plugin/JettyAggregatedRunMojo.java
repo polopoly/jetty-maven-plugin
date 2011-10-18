@@ -121,11 +121,11 @@ public class JettyAggregatedRunMojo
 
                 webAppConfig.setClassPathFiles(allFiles);
 
-                getLog().info("Scanning: " + allFiles);
+                getLog().debug("Scanning: " + allFiles);
 
                 Scanner scanner = new Scanner();
                 scanner.addListener(new Scanner.BulkListener() {
-                    public void filesChanged(List changes)
+                    public void filesChanged(List<String> changes)
                     {
                         try {
                             getLog().info("Detected changes: " + changes);
@@ -145,6 +145,8 @@ public class JettyAggregatedRunMojo
 
                 scanner.start();
                 scanners.add(scanner);
+
+                getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
             }
         }
 
