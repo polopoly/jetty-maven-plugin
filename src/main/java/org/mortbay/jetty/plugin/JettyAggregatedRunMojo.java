@@ -1,11 +1,16 @@
 package org.mortbay.jetty.plugin;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
+import java.util.logging.LogManager;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -13,6 +18,8 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ProjectDependencyGraph;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.ContextHandler;
@@ -39,6 +46,12 @@ public class JettyAggregatedRunMojo
     * @parameter
     */
     private ContextHandler[] externalArtifactContextHandlers;
+    
+    /**
+     * java util logging properties
+     * @parameter
+     */
+    private Properties loggingProperties = new Properties();
 
     /**
      * @parameter expression="${session}"
@@ -73,6 +86,22 @@ public class JettyAggregatedRunMojo
      * @component
      */
     protected ArtifactFactory artifactFactory;
+    
+    @Override
+    public void execute() throws MojoExecutionException, MojoFailureException {
+        applyLoggingProperties();
+        super.execute();
+    }
+
+    private void applyLoggingProperties() throws MojoFailureException {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            loggingProperties.store(baos, "Logging properties");
+            LogManager.getLogManager().readConfiguration(new ByteArrayInputStream(baos.toByteArray()));
+        } catch (IOException e) {
+            throw new MojoFailureException("Unable to apply logging properties", e);
+        }
+    }
 
     @Override
     public void deployWebApplications()
