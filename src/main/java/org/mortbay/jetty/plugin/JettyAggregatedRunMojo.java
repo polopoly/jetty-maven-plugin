@@ -174,10 +174,9 @@ public class JettyAggregatedRunMojo
 
                 scanner.start();
                 scanners.add(scanner);
-
-                getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
             }
         }
+        getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
 
         if (externalArtifactContextHandlers != null) {
             configureWarArtifactsForExtraContextHandlers();
