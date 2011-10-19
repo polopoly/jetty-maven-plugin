@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -127,14 +128,11 @@ public class JettyAggregatedRunMojo
         throws Exception
     {
         scanners.clear();
-
-        if (externalArtifactContextHandlers != null) {
-            configureWarArtifactsForExtraContextHandlers();
-        }
-
+        Set<String> subprojects = new HashSet<String>();
         for (MavenProject subProject : session.getProjects()) {
             if ("war".equals(subProject.getPackaging())) {
                 final JettyWebAppContext webAppConfig = configBuilder.configureWebApplication(subProject, getLog());
+                subprojects.add(webAppConfig.getContextPath());
 
                 getLog().info("\n=========================================================================="
                             + "\nInjecting : " + subProject.getName() + "\n\n" +  configBuilder.toInfoString(webAppConfig)
@@ -199,10 +197,13 @@ public class JettyAggregatedRunMojo
                 scanners.add(scanner);
             }
         }
+        if (externalArtifactContextHandlers != null) {
+            configureWarArtifactsForExtraContextHandlers(subprojects);
+        }
         getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
     }
 
-    private void configureWarArtifactsForExtraContextHandlers()
+    private void configureWarArtifactsForExtraContextHandlers(Set<String> skipContexts)
         throws Exception
     {
         for (Handler contextHandler : externalArtifactContextHandlers) {
@@ -212,18 +213,24 @@ public class JettyAggregatedRunMojo
                 ArtifactData warArtifact = jettyContext.getWarArtifact();
 
                 if (warArtifact != null) {
+                    if (skipContexts.contains(jettyContext.getContextPath())) {
+                        getLog().info(String.format("Not deploying '%s' for context '%s' since it is already handled by sub-project",
+                                                    warArtifact.toString(), jettyContext.getContextPath()));
+                        continue;
+                    }
+
                     Artifact artifact = artifactFactory.createArtifact(warArtifact.groupId,
                                                                        warArtifact.artifactId,
                                                                        warArtifact.version,
                                                                        warArtifact.scope,
                                                                        warArtifact.type);
-
                     resolver.resolve(artifact, remoteRepositories, localRepository);
 
                     File warFile = artifact.getFile();
                     jettyContext.setWar(warFile.getAbsolutePath());
-
                     getServer().addHandler(jettyContext);
+
+                    getLog().info(String.format("Deploying '%s' for context '%s'", warFile.getAbsolutePath(), jettyContext.getContextPath()));
                 }
             }
         }
