@@ -5,11 +5,7 @@
   <version>7.4.5-polopoly-1.6-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
   <name>Jetty Maven Plugin with multi context support</name>
-  
-  <prerequisites>
-    <maven>3.0</maven>
-  </prerequisites>
-  
+    
   <properties>
     <mavenVersion>3.0.3</mavenVersion>
     <pluginToolsVersion>2.5.1</pluginToolsVersion>
