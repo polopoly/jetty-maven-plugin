@@ -16,23 +16,17 @@ public class WebApplicationScanBuilder {
     public List<File> setupScannerFiles(JettyWebAppContext webAppConfig, List<File> extraFiles, List<String> extraResources)
         throws MojoExecutionException
     {
-        try {
-            final ArrayList<File> scanList = new ArrayList<File>();
-            addToList(webAppConfig.getDescriptor(), scanList);
-            addToList(webAppConfig.getJettyEnvXml(), scanList);
-            addToList(webAppConfig.getDefaultsDescriptor(), scanList);
-            addToList(webAppConfig.getOverrideDescriptors(), scanList);
-            addToList(webAppConfig.getWebInf(), scanList);
-            addToList(extraResources, scanList);
+        final ArrayList<File> scanList = new ArrayList<File>();
+        addToList(webAppConfig.getDescriptor(), scanList);
+        addToList(webAppConfig.getJettyEnvXml(), scanList);
+        addToList(webAppConfig.getDefaultsDescriptor(), scanList);
+        addToList(webAppConfig.getOverrideDescriptors(), scanList);
+        addToList(extraResources, scanList);
 
-            addFilesToList(webAppConfig.getWebInfLib(), scanList);
-            addFilesToList(extraFiles, scanList);
+        addFilesToList(webAppConfig.getWebInfLib(), scanList);
+        addFilesToList(extraFiles, scanList);
 
-            return scanList;
-
-        } catch (IOException e) {
-            throw new MojoExecutionException("Problem configuring scanner.", e);
-        }
+        return scanList;
     }
 
     private void addToList(List<String> items, ArrayList<File> scanList)
