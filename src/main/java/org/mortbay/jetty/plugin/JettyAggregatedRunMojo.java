@@ -34,6 +34,7 @@ import org.eclipse.jetty.util.Scanner;
  *
  * @aggregator
  * @goal run-all
+ *
  * @requiresDependencyResolution runtime
  */
 public class JettyAggregatedRunMojo
@@ -49,16 +50,16 @@ public class JettyAggregatedRunMojo
     * @parameter
     */
     private ContextHandler[] externalArtifactContextHandlers;
-    
+
     /**
-     * Configure java util logging properties. This parameter has precedence 
+     * Configure java util logging properties. This parameter has precedence
      * over parameter loggingPropertiesFile.
      * @parameter
      */
     private Properties loggingProperties = new Properties();
-    
+
     /**
-     * Configure java util logging via logging properties file. It may be 
+     * Configure java util logging via logging properties file. It may be
      * overridden by parameter loggingProperties.
      * @parameter expression="${loggingProperties.file}"
      */
@@ -97,30 +98,54 @@ public class JettyAggregatedRunMojo
      * @component
      */
     protected ArtifactFactory artifactFactory;
-    
+
+    /**
+     * A list of submodules that should be excluded from the
+     * list of web applications started by Jetty.
+     *
+     * @parameter
+     */
+    private String[] excludedWebApps;
+
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
+    public void execute()
+        throws MojoExecutionException, MojoFailureException
+    {
         applyLoggingProperties();
         super.execute();
     }
 
-    private void applyLoggingProperties() throws MojoFailureException {
+    private void applyLoggingProperties()
+        throws MojoFailureException
+    {
         try {
             InputStream is;
+
             if (!loggingProperties.isEmpty()) {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 loggingProperties.store(baos, "Logging properties");
                 is = new ByteArrayInputStream(baos.toByteArray());
                 LogManager.getLogManager().readConfiguration(is);
-                
             } else if (loggingPropertiesFile != null) {
                 is = new BufferedInputStream(new FileInputStream(loggingPropertiesFile));
                 LogManager.getLogManager().readConfiguration(is);
             }
-            
         } catch (IOException e) {
             throw new MojoFailureException("Unable to apply logging properties", e);
         }
+    }
+
+    private boolean isAnExcludedWebApp(final MavenProject project)
+    {
+        if (excludedWebApps != null) {
+            for (String excludedWebApp : excludedWebApps) {
+                if (project.getArtifactId().equals(excludedWebApp)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     @Override
@@ -129,8 +154,9 @@ public class JettyAggregatedRunMojo
     {
         scanners.clear();
         Set<String> subprojects = new HashSet<String>();
+
         for (MavenProject subProject : session.getProjects()) {
-            if ("war".equals(subProject.getPackaging())) {
+            if ("war".equals(subProject.getPackaging()) && !isAnExcludedWebApp(subProject)) {
                 final JettyWebAppContext webAppConfig = configBuilder.configureWebApplication(subProject, getLog());
                 subprojects.add(webAppConfig.getContextPath());
 
@@ -155,14 +181,6 @@ public class JettyAggregatedRunMojo
                         scanBuilder.setupScannerFiles(webAppConfig,
                                                       Arrays.asList(subProject.getFile()),
                                                       Collections.<String>emptyList());
-
-                /**
-                 * Order in classpath should be
-                 *
-                 * (1) target/classes of the webapp itself
-                 * (2) target/classes of all local dependencies
-                 * (3) all regular maven dependencies
-                 */
 
                 List<File> allFiles = new ArrayList<File>(webAppConfig.getWebInfClasses());
 
@@ -197,13 +215,15 @@ public class JettyAggregatedRunMojo
                 scanners.add(scanner);
             }
         }
+
         if (externalArtifactContextHandlers != null) {
             configureWarArtifactsForExtraContextHandlers(subprojects);
         }
+
         getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
     }
 
-    private void configureWarArtifactsForExtraContextHandlers(Set<String> skipContexts)
+    private void configureWarArtifactsForExtraContextHandlers(final Set<String> skipContexts)
         throws Exception
     {
         for (Handler contextHandler : externalArtifactContextHandlers) {
@@ -224,6 +244,7 @@ public class JettyAggregatedRunMojo
                                                                        warArtifact.version,
                                                                        warArtifact.scope,
                                                                        warArtifact.type);
+
                     resolver.resolve(artifact, remoteRepositories, localRepository);
 
                     File warFile = artifact.getFile();
