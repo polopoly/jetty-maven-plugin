@@ -22,6 +22,7 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ProjectDependencyGraph;
+import org.apache.maven.model.Profile;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
@@ -70,6 +71,17 @@ public class JettyAggregatedRunMojo
      * @required
      */
     private MavenSession session;
+
+    /**
+     * What project should be considered the base when deciding what war modules to start,
+     * can be either null (use the Maven session projects, the default, this should work
+     * for all cases except when multiple distinct war collections exists in the same project,
+     * eg multiple test modules). If not null only modules referenced from the base project will
+     * be included. Nb parent only works if the execution is started from the
+     * parent or higher up (eg the parent is part of the session projects).
+     * @parameter
+     */
+    private String baseJettyModuleProjectPath = null;
 
     /**
      * Used for resolving artifacts
@@ -154,8 +166,13 @@ public class JettyAggregatedRunMojo
     {
         scanners.clear();
         Set<String> subprojects = new HashSet<String>();
-
-        for (MavenProject subProject : session.getProjects()) {
+        List<MavenProject> includedProjects = session.getProjects();
+        MavenProject base = getProject(baseJettyModuleProjectPath, session.getCurrentProject(), includedProjects);
+        // If the base project is not part of the session (or no base is specified), run with default maven session projects
+        if (base != null) {
+            includedProjects = filterNestedProjects(base, includedProjects);
+        }
+        for (MavenProject subProject : includedProjects) {
             if ("war".equals(subProject.getPackaging()) && !isAnExcludedWebApp(subProject)) {
                 final JettyWebAppContext webAppConfig = configBuilder.configureWebApplication(subProject, getLog());
                 subprojects.add(webAppConfig.getContextPath());
@@ -221,6 +238,63 @@ public class JettyAggregatedRunMojo
         }
 
         getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
+    }
+
+    private MavenProject getProject(String basePath, MavenProject thisProject, List<MavenProject> includedProjects) throws IOException
+    {
+        if (basePath == null) {
+            return null;
+        }
+
+        String base = new File(thisProject.getBasedir().getAbsoluteFile() + "/" + basePath).getCanonicalPath();
+        for (MavenProject project : includedProjects) {
+            if (project.getBasedir().getAbsolutePath().equals(base)) {
+                return project;
+            }
+        }
+        return null;
+    }
+
+    private List<MavenProject> filterNestedProjects(MavenProject base, List<MavenProject> includedProjects) throws IOException
+    {
+        Set<String> projectsReached = new HashSet<String>();
+        projectsReached.add(base.getArtifact().getDependencyConflictId());
+        getReachedProjects(base, includedProjects, projectsReached);
+        List<MavenProject> projects = new ArrayList<MavenProject>();
+        for (MavenProject project : includedProjects) {
+            if (projectsReached.contains(project.getArtifact().getDependencyConflictId())) {
+                projects.add(project);
+            }
+        }
+        return projects;
+    }
+
+    private void getReachedProjects(MavenProject base, List<MavenProject> includedProjects, Set<String> hashSet) throws IOException
+    {
+        for (String module : base.getModules()) {
+            MavenProject moduleProject = getProject(module, base, includedProjects);
+            if (moduleProject != null && !isAnExcludedWebApp(moduleProject)) {
+                String id = moduleProject.getArtifact().getDependencyConflictId();
+                if (!hashSet.contains(id)) {
+                    hashSet.add(id);
+                    getReachedProjects(moduleProject, includedProjects, hashSet);
+                }
+            }
+        }
+        for (Profile p : base.getActiveProfiles()) {
+            if (p.getModules() != null) {
+                for (Object module : p.getModules()) {
+                    MavenProject moduleProject = getProject((String) module, base, includedProjects);
+                    if (moduleProject != null && !isAnExcludedWebApp(moduleProject)) {
+                        String id = moduleProject.getArtifact().getDependencyConflictId();
+                        if (!hashSet.contains(id)) {
+                            hashSet.add(id);
+                            getReachedProjects(moduleProject, includedProjects, hashSet);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void configureWarArtifactsForExtraContextHandlers(final Set<String> skipContexts)
