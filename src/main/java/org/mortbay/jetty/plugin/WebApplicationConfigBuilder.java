@@ -80,13 +80,13 @@ public class WebApplicationConfigBuilder
                 }
             }
         }
-        
+
+        // Turn off some default settings in jetty
         URL overrideWebXMLUrl = this.getClass().getResource("/com/polopoly/web_override.xml");
         if (overrideWebXMLUrl != null) {
             webAppConfig.addOverrideDescriptor(overrideWebXMLUrl.toExternalForm());
         }
-        System.err.println("URL was: " + overrideWebXMLUrl.toExternalForm());
-        
+
         return webAppConfig;
     }
 
