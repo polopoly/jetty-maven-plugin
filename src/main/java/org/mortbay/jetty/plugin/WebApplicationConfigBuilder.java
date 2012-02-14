@@ -1,6 +1,7 @@
 package org.mortbay.jetty.plugin;
 
 import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -78,6 +79,12 @@ public class WebApplicationConfigBuilder
                    webAppConfig.setDescriptor(f.getCanonicalPath());
                 }
             }
+        }
+
+        // Turn off some default settings in jetty
+        URL overrideWebXMLUrl = this.getClass().getResource("/com/polopoly/web_override.xml");
+        if (overrideWebXMLUrl != null) {
+            webAppConfig.addOverrideDescriptor(overrideWebXMLUrl.toExternalForm());
         }
 
         return webAppConfig;

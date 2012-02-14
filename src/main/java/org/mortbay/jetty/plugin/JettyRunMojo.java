@@ -17,6 +17,7 @@ package org.mortbay.jetty.plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -319,7 +320,13 @@ public class JettyRunMojo extends AbstractJettyMojo
        webAppConfig.setWebInfLib (getDependencyFiles());
        
        setClassPathFiles(setUpClassPath(webAppConfig.getWebInfClasses(), webAppConfig.getWebInfLib()));
-        
+
+       // Turn off some default settings in jetty
+       URL overrideWebXMLUrl = this.getClass().getResource("/com/polopoly/web_override.xml");
+       if (overrideWebXMLUrl != null) {
+           webAppConfig.addOverrideDescriptor(overrideWebXMLUrl.toExternalForm());
+       }
+
         //if we have not already set web.xml location, need to set one up
         if (webAppConfig.getDescriptor() == null)
         {
