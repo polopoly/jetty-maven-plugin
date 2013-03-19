@@ -46,7 +46,11 @@ public class JettyAggregatedRunMojo
     final List<Scanner> scanners = new ArrayList<Scanner>();
 
     /**
-    * List of other contexts to set up. Optional.
+    * List of other contexts to set up.
+    * Typically these contexts are web applications not available as Maven submodules
+    * in the current project, but that are instead deployed in a Maven repository.
+    * See the "Jetty Maven plugin" page in the Nitro documentation for information
+    * about the context handler structure.
     * @parameter
     */
     private ContextHandler[] externalArtifactContextHandlers;
@@ -67,7 +71,7 @@ public class JettyAggregatedRunMojo
 
     /**
      * @parameter expression="${session}"
-     * @required
+     * @readonly
      */
     private MavenSession session;
 
@@ -82,6 +86,7 @@ public class JettyAggregatedRunMojo
      * The local repository where the artifacts are located.
      *
      * @parameter expression="${localRepository}"
+     * @readonly
      */
     protected ArtifactRepository localRepository;
 
@@ -89,6 +94,7 @@ public class JettyAggregatedRunMojo
      * The remote repositories where artifacts are located.
      *
      * @parameter expression="${project.remoteArtifactRepositories}"
+     * @readonly
      */
     protected List<?> remoteRepositories;
 
@@ -101,7 +107,9 @@ public class JettyAggregatedRunMojo
 
     /**
      * A list of submodules that should be excluded from the
-     * list of web applications started by Jetty.
+     * list of web applications started by Jetty. This is a
+     * list of simple submodule names like 'webapp-front',
+     * not artifact coordinates.
      *
      * @parameter
      */
