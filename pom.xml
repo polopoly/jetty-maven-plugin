@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.polopoly.jetty</groupId>
   <artifactId>jetty-maven-plugin</artifactId>
-  <version>7.4.5-polopoly-1.10</version>
+  <version>7.4.5-polopoly-1.11-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
   <name>Jetty Maven Plugin with multi context support</name>
 
