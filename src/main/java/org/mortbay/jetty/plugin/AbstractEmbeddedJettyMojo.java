@@ -15,11 +15,6 @@ import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.xml.XmlConfiguration;
 
-/**
- * AbstractEmbeddedJettyMojo
- *
- * Created by bitter on 2011-08-31
- */
 public abstract class AbstractEmbeddedJettyMojo extends AbstractMojo {
 
     public final String PORT_SYSPROPERTY = "jetty.port";

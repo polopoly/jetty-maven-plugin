@@ -16,7 +16,6 @@
 
 package org.mortbay.jetty.plugin;
 
-
 import org.apache.maven.plugin.MojoExecutionException;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.jetty.util.Scanner;
@@ -26,13 +25,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.*;
 
-
-
-/**
- * AbstractJettyMojo
- *
- *
- */
 public abstract class AbstractJettyMojo extends AbstractEmbeddedJettyMojo
 {
 

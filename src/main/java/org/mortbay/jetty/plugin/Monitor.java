@@ -13,7 +13,6 @@
 //limitations under the License.
 //========================================================================
 
-
 package org.mortbay.jetty.plugin;
 
 import java.io.IOException;
@@ -25,10 +24,6 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 import org.eclipse.jetty.server.Server;
-
-
-
-
 
 /**
  * Monitor

@@ -45,7 +45,6 @@ import org.apache.maven.project.artifact.MavenMetadataSource;
  * 
  * This class is able to pull down a remote pom, find all of it's
  * dependencies and transitively resolve them.
- * 
  *
  */
 public class RuntimeDependencyResolver 

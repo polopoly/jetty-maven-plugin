@@ -19,9 +19,6 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.eclipse.jetty.util.resource.Resource;
 
-/**
- * Created by bitter on 2011-08-31
- */
 public class WebApplicationConfigBuilder
 {
     private static final Logger LOG = Logger.getLogger(WebApplicationConfigBuilder.class.getName());

@@ -8,9 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by bitter on 2011-08-31
- */
 public class WebApplicationScanBuilder {
 
     public List<File> setupScannerFiles(JettyWebAppContext webAppConfig, List<File> extraFiles, List<String> extraResources)
