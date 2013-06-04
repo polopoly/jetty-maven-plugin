@@ -83,7 +83,11 @@ public class WebApplicationConfigBuilder
         if (overrideWebXMLUrl != null) {
             webAppConfig.addOverrideDescriptor(overrideWebXMLUrl.toExternalForm());
         }
-
+        // Increase session-timeout
+        URL defaultsWebXMLUrl = this.getClass().getResource("/com/polopoly/webdefaults.xml");
+        if (defaultsWebXMLUrl != null) {
+            webAppConfig.setDefaultsDescriptor(defaultsWebXMLUrl.toExternalForm());
+        }
         return webAppConfig;
     }
 

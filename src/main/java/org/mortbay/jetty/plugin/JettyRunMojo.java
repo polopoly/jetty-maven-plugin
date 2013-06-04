@@ -4,7 +4,7 @@
 //------------------------------------------------------------------------
 //Licensed under the Apache License, Version 2.0 (the "License");
 //you may not use this file except in compliance with the License.
-//You may obtain a copy of the License at 
+//You may obtain a copy of the License at
 //http://www.apache.org/licenses/LICENSE-2.0
 //Unless required by applicable law or agreed to in writing, software
 //distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,43 +25,36 @@ import java.util.List;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.ContextHandler;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.util.Scanner;
-import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.resource.JarResource;
 import org.eclipse.jetty.util.resource.Resource;
-import org.eclipse.jetty.util.resource.ResourceCollection;
 import org.eclipse.jetty.webapp.WebAppContext;
-import org.eclipse.jetty.xml.XmlConfiguration;
 
 /**
  *  <p>
- *  This goal is used in-situ on a Maven project without first requiring that the project 
+ *  This goal is used in-situ on a Maven project without first requiring that the project
  *  is assembled into a war, saving time during the development cycle.
  *  The plugin forks a parallel lifecycle to ensure that the "compile" phase has been completed before invoking Jetty. This means
  *  that you do not need to explicity execute a "mvn compile" first. It also means that a "mvn clean jetty:run" will ensure that
  *  a full fresh compile is done before invoking Jetty.
  *  </p>
  *  <p>
- *  Once invoked, the plugin can be configured to run continuously, scanning for changes in the project and automatically performing a 
+ *  Once invoked, the plugin can be configured to run continuously, scanning for changes in the project and automatically performing a
  *  hot redeploy when necessary. This allows the developer to concentrate on coding changes to the project using their IDE of choice and have those changes
  *  immediately and transparently reflected in the running web container, eliminating development time that is wasted on rebuilding, reassembling and redeploying.
  *  </p>
  *  <p>
  *  You may also specify the location of a jetty.xml file whose contents will be applied before any plugin configuration.
- *  This can be used, for example, to deploy a static webapp that is not part of your maven build. 
+ *  This can be used, for example, to deploy a static webapp that is not part of your maven build.
  *  </p>
  *  <p>
  *  There is a <a href="run-mojo.html">reference guide</a> to the configuration parameters for this plugin, and more detailed information
  *  with examples in the <a href="http://docs.codehaus.org/display/JETTY/Maven+Jetty+Plugin">Configuration Guide</a>.
  *  </p>
- * 
- * 
+ *
+ *
  * @goal run
  * @requiresDependencyResolution runtime
  * @execute phase="test-compile"
@@ -76,29 +69,29 @@ public class JettyRunMojo extends AbstractJettyMojo
      * @parameter default-value="false"
      */
     private boolean useTestClasspath;
-    
-    
-    
+
+
+
     /**
      * The default location of the web.xml file. Will be used
      * if <webAppConfig><descriptor> is not set.
-     * 
+     *
      * @parameter expression="${maven.war.webxml}"
      * @readonly
      */
     private String webXml;
-    
-    
+
+
     /**
      * The directory containing generated classes.
      *
      * @parameter expression="${project.build.outputDirectory}"
      * @required
-     * 
+     *
      */
     private File classesDirectory;
-    
-    
+
+
      /**
      * List of other contexts to set up. Optional.
      * @parameter
@@ -107,33 +100,33 @@ public class JettyRunMojo extends AbstractJettyMojo
 
     /**
      * The directory containing generated test classes.
-     * 
+     *
      * @parameter expression="${project.build.testOutputDirectory}"
      * @required
      */
     private File testClassesDirectory;
-    
+
     /**
      * Root directory for all html/jsp etc files
      *
      * @parameter expression="${maven.war.src}"
-     * 
+     *
      */
     private File webAppSourceDirectory;
-    
+
     /**
      * @parameter expression="${plugin.artifacts}"
      * @readonly
      */
     private List pluginArtifacts;
-    
+
     /**
      * List of files or directories to additionally periodically scan for changes. Optional.
      * @parameter
      */
     private File[] scanTargets;
-    
-    
+
+
     /**
      * List of directories with ant-style &lt;include&gt; and &lt;exclude&gt; patterns
      * for extra targets to periodically scan for changes. Can be used instead of,
@@ -147,20 +140,20 @@ public class JettyRunMojo extends AbstractJettyMojo
      * List of files on the classpath for the webapp
      */
     private List<File> classPathFiles;
-    
-    
+
+
     /**
      * Extra scan targets as a list
      */
     private List<File> extraScanTargets;
-    
+
 
     public String getWebXml()
     {
         return this.webXml;
     }
-    
-   
+
+
 
     public File getClassesDirectory()
     {
@@ -172,8 +165,8 @@ public class JettyRunMojo extends AbstractJettyMojo
         return this.webAppSourceDirectory;
     }
 
-   
-    
+
+
     public void setClassPathFiles (List<File> list)
     {
         this.classPathFiles = new ArrayList<File>(list);
@@ -189,17 +182,17 @@ public class JettyRunMojo extends AbstractJettyMojo
     {
         return this.extraScanTargets;
     }
-    
+
     public void setExtraScanTargets(List<File> list)
     {
         this.extraScanTargets = list;
     }
-    
-    
-    
+
+
+
     /**
      * Verify the configuration given in the pom.
-     * 
+     *
      * @see org.mortbay.jetty.plugin.AbstractJettyMojo#checkPomConfiguration()
      */
     public void checkPomConfiguration () throws MojoExecutionException
@@ -210,7 +203,7 @@ public class JettyRunMojo extends AbstractJettyMojo
             if ((getWebAppSourceDirectory() == null) || !getWebAppSourceDirectory().exists())
             {
                 webAppSourceDirectory = new File (getProject().getBasedir(), "src"+File.separator+"main"+File.separator+"webapp");
-                getLog().info("webAppSourceDirectory "+getWebAppSourceDirectory() +" does not exist. Defaulting to "+webAppSourceDirectory.getAbsolutePath());   
+                getLog().info("webAppSourceDirectory "+getWebAppSourceDirectory() +" does not exist. Defaulting to "+webAppSourceDirectory.getAbsolutePath());
             }
             else
                 getLog().info( "Webapp source directory = " + getWebAppSourceDirectory().getCanonicalPath());
@@ -219,7 +212,7 @@ public class JettyRunMojo extends AbstractJettyMojo
         {
             throw new MojoExecutionException("Webapp source directory does not exist", e);
         }
-        
+
 
         // check the classes to form a classpath with
         try
@@ -233,25 +226,25 @@ public class JettyRunMojo extends AbstractJettyMojo
                     getLog().info("Classes = " + getClassesDirectory().getCanonicalPath());
             }
             else
-                getLog().info("Classes directory not set");         
+                getLog().info("Classes directory not set");
         }
         catch (IOException e)
         {
             throw new MojoExecutionException("Location of classesDirectory does not exist");
         }
-        
-        
+
+
         setExtraScanTargets(new ArrayList<File>());
         if (scanTargets != null)
-        {            
+        {
             for (int i=0; i< scanTargets.length; i++)
             {
                 getLog().info("Added extra scan target:"+ scanTargets[i]);
                 getExtraScanTargets().add(scanTargets[i]);
-            }            
+            }
         }
-        
-        
+
+
         if (scanTargetPatterns!=null)
         {
             for (int i=0;i<scanTargetPatterns.length; i++)
@@ -265,7 +258,7 @@ public class JettyRunMojo extends AbstractJettyMojo
                         strbuff.append(",");
                 }
                 String includes = strbuff.toString();
-                
+
                 itor = scanTargetPatterns[i].getExcludes().iterator();
                 strbuff= new StringBuffer();
                 while (itor.hasNext())
@@ -296,14 +289,14 @@ public class JettyRunMojo extends AbstractJettyMojo
         }
     }
 
-   
+
 
 
 
     public void configureWebApplication() throws Exception
     {
        super.configureWebApplication();
-       
+
        //Set up the location of the webapp.
        //There are 2 parts to this: setWar() and setBaseResource(). On standalone jetty,
        //the former could be the location of a packed war, while the latter is the location
@@ -312,13 +305,13 @@ public class JettyRunMojo extends AbstractJettyMojo
        Resource webAppSourceDirectoryResource = Resource.newResource(webAppSourceDirectory.getCanonicalPath());
        if (webAppConfig.getWar() == null)
            webAppConfig.setWar(webAppSourceDirectoryResource.toString());
-       
+
        if (webAppConfig.getBaseResource() == null)
                webAppConfig.setBaseResource(webAppSourceDirectoryResource);
-  
+
        webAppConfig.setWebInfClasses (getClassesDirs());
        webAppConfig.setWebInfLib (getDependencyFiles());
-       
+
        setClassPathFiles(setUpClassPath(webAppConfig.getWebInfClasses(), webAppConfig.getWebInfLib()));
 
        // Turn off some default settings in jetty
@@ -326,6 +319,12 @@ public class JettyRunMojo extends AbstractJettyMojo
        if (overrideWebXMLUrl != null) {
            webAppConfig.addOverrideDescriptor(overrideWebXMLUrl.toExternalForm());
        }
+       // Increase session-timeout
+       URL defaultsWebXMLUrl = this.getClass().getResource("/com/polopoly/webdefaults.xml");
+       if (defaultsWebXMLUrl != null) {
+           webAppConfig.setDefaultsDescriptor(defaultsWebXMLUrl.toExternalForm());
+       }
+
 
         //if we have not already set web.xml location, need to set one up
         if (webAppConfig.getDescriptor() == null)
@@ -339,7 +338,7 @@ public class JettyRunMojo extends AbstractJettyMojo
                     webAppConfig.setDescriptor(r.toString());
                 }
             }
-            
+
             //Still don't have a web.xml file: try the resourceBase of the webapp, if it is set
             if (webAppConfig.getDescriptor() == null && webAppConfig.getBaseResource() != null)
             {
@@ -349,7 +348,7 @@ public class JettyRunMojo extends AbstractJettyMojo
                     webAppConfig.setDescriptor(r.toString());
                 }
             }
-            
+
             //Still don't have a web.xml file: finally try the configured static resource directory if there is one
             if (webAppConfig.getDescriptor() == null && (webAppSourceDirectory != null))
             {
@@ -364,8 +363,8 @@ public class JettyRunMojo extends AbstractJettyMojo
 
         if (webAppConfig.getClassPathFiles() == null)
             webAppConfig.setClassPathFiles(getClassPathFiles());
-        
-       
+
+
         getLog().info("Webapp directory = " + getWebAppSourceDirectory().getCanonicalPath());
 
         // Add extra context handlers
@@ -375,7 +374,7 @@ public class JettyRunMojo extends AbstractJettyMojo
             }
         }
     }
-    
+
     public void configureScanner ()
     throws MojoExecutionException
     {
@@ -422,7 +421,7 @@ public class JettyRunMojo extends AbstractJettyMojo
                 throw new MojoExecutionException("Problem configuring scanner for webdefaults.xml", e);
             }
         }
-        
+
         if (webAppConfig.getOverrideDescriptor() != null)
         {
             try
@@ -435,8 +434,8 @@ public class JettyRunMojo extends AbstractJettyMojo
                 throw new MojoExecutionException("Problem configuring scanner for webdefaults.xml", e);
             }
         }
-        
-        
+
+
         File jettyWebXmlFile = findJettyWebXmlFile(new File(getWebAppSourceDirectory(),"WEB-INF"));
         if (jettyWebXmlFile != null)
             scanList.add(jettyWebXmlFile);
@@ -470,7 +469,7 @@ public class JettyRunMojo extends AbstractJettyMojo
         getLog().debug("Stopping webapp ...");
         webAppConfig.stop();
         getLog().debug("Reconfiguring webapp ...");
- 
+
         checkPomConfiguration();
         configureWebApplication();
 
@@ -493,7 +492,7 @@ public class JettyRunMojo extends AbstractJettyMojo
         webAppConfig.start();
         getLog().info("Restart completed at "+new Date().toString());
     }
-    
+
     private List<File> getDependencyFiles ()
     {
         List<File> dependencyFiles = new ArrayList<File>();
@@ -516,27 +515,27 @@ public class JettyRunMojo extends AbstractJettyMojo
                 }
                 continue;
             }
-            if (((!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) && (!Artifact.SCOPE_TEST.equals( artifact.getScope()))) 
+            if (((!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) && (!Artifact.SCOPE_TEST.equals( artifact.getScope())))
                     ||
                 (useTestClasspath && Artifact.SCOPE_TEST.equals( artifact.getScope())))
             {
                 dependencyFiles.add(artifact.getFile());
-                getLog().debug( "Adding artifact " + artifact.getFile().getName() + " for WEB-INF/lib " );   
+                getLog().debug( "Adding artifact " + artifact.getFile().getName() + " for WEB-INF/lib " );
             }
         }
-        
+
         webAppConfig.setOverlays(overlays);
-        
-      
-        return dependencyFiles; 
+
+
+        return dependencyFiles;
     }
 
     private List<File> setUpClassPath(List<File> webInfClasses, List<File> webInfJars)
     {
-        List<File> classPathFiles = new ArrayList<File>();       
+        List<File> classPathFiles = new ArrayList<File>();
         classPathFiles.addAll(webInfClasses);
         classPathFiles.addAll(webInfJars);
-      
+
         if (getLog().isDebugEnabled())
         {
             for (int i = 0; i < classPathFiles.size(); i++)
@@ -546,19 +545,19 @@ public class JettyRunMojo extends AbstractJettyMojo
         }
         return classPathFiles;
     }
-    
+
     private List<File> getClassesDirs ()
     {
         List<File> classesDirs = new ArrayList<File>();
-        
+
         //if using the test classes, make sure they are first
         //on the list
         if (useTestClasspath && (testClassesDirectory != null))
             classesDirs.add(testClassesDirectory);
-        
+
         if (getClassesDirectory() != null)
             classesDirs.add(getClassesDirectory());
-        
+
         return classesDirs;
     }
 }
