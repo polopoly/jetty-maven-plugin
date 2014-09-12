@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,12 +20,19 @@ import java.util.logging.LogManager;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
+import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.ProjectDependencyGraph;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Exclusion;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectBuildingException;
+import org.apache.maven.repository.RepositorySystem;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.Scanner;
@@ -106,6 +114,16 @@ public class JettyAggregatedRunMojo
     protected ArtifactFactory artifactFactory;
 
     /**
+     * @component
+     */
+    protected RepositorySystem repositorySystem;
+
+    /**
+     * @component
+     */
+    protected MavenProjectBuilder projectBuilder;
+
+    /**
      * A list of submodules that should be excluded from the
      * list of web applications started by Jetty. This is a
      * list of simple submodule names like 'webapp-front',
@@ -114,6 +132,13 @@ public class JettyAggregatedRunMojo
      * @parameter
      */
     private String[] excludedWebApps;
+
+    /*private ArtifactData[] extraDependencies;*/
+
+    /**
+     * @parameter
+     */
+    private boolean injectLocalProject;
 
     @Override
     public void execute()
@@ -257,9 +282,109 @@ public class JettyAggregatedRunMojo
 
                     File warFile = artifact.getFile();
                     jettyContext.setWar(warFile.getAbsolutePath());
+
+                    if (injectLocalProject) {
+                        StringBuffer extraClasspath = new StringBuffer();
+                        buildExtraClasspath(extraClasspath, getProject(), getProject().getDependencyManagement().getDependencies(), new ArrayList<Exclusion>(), 0);
+                        System.out.println("============== Adding extra classpath: " + extraClasspath.toString());
+                        if (extraClasspath.length() > 0) {
+                            jettyContext.setExtraClasspath(extraClasspath.toString());
+                        }
+                    }
+
+                    /*if (extraDependencies != null) {
+                        StringBuffer extraClasspath = new StringBuffer();
+                        for (ArtifactData dependency : extraDependencies) {
+                            if (dependency.type == null) {
+                                dependency.type = "jar";
+                            }
+
+                            Artifact dependencyArtifact = artifactFactory.createArtifact(dependency.groupId,
+                                    dependency.artifactId,
+                                    dependency.version,
+                                    dependency.scope,
+                                    dependency.type);
+
+                            resolver.resolve(dependencyArtifact, remoteRepositories, localRepository);
+
+                            if (extraClasspath.length() > 0) {
+                                extraClasspath.append(":");
+                            }
+                            extraClasspath.append(dependencyArtifact.getFile().getAbsolutePath());
+
+                            Artifact pomArtifact = artifactFactory.createArtifact(dependency.groupId,
+                                    dependency.artifactId,
+                                    dependency.version,
+                                    dependency.scope,
+                                    "pom");
+
+                            resolver.resolve(dependencyArtifact, remoteRepositories, localRepository);
+
+                            MavenProject depProject = mavenProjectBuilder.buildFromRepository(pomArtifact, remoteRepositories, localRepository);
+                            Set<Artifact> depArtifacts = depProject.createArtifacts(artifactFactory, null, null);
+                            ArtifactResolutionResult arr = resolver.resolveTransitively(depArtifacts, pomArtifact, depProject.getManagedVersionMap(), localRepository, remoteRepositories, , filter);
+
+
+                            if (extraClasspath.length() > 0) {
+                                extraClasspath.append(":");
+                            }
+                            extraClasspath.append(dependencyArtifact.getFile().getAbsolutePath());
+                        }
+                        System.out.println("============== Adding extra classpath: " + extraClasspath.toString());
+                        if (extraClasspath.length() > 0) {
+                            jettyContext.setExtraClasspath(extraClasspath.toString());
+                        }
+                    }*/
                     getServer().addHandler(jettyContext);
 
                     getLog().info(String.format("Deploying '%s' for context '%s'", warFile.getAbsolutePath(), jettyContext.getContextPath()));
+                }
+            }
+        }
+    }
+
+    private void buildExtraClasspath(StringBuffer extraClasspath, MavenProject project, List<Dependency> depManagement, List<Exclusion> exclusions, int level) throws ArtifactResolutionException, ArtifactNotFoundException, ProjectBuildingException, MalformedURLException {
+        Artifact artifact = project.getArtifact();
+
+        if (extraClasspath.length() > 0) {
+            extraClasspath.append(",;");
+        }
+        resolver.resolve(artifact, remoteRepositories, localRepository);
+        extraClasspath.append(artifact.getFile().getAbsolutePath());
+
+        List<Dependency> dependencies = project.getDependencies();
+        for (Dependency dependency : dependencies) {
+            if (!"provided".equals(dependency.getScope()) && !"test".equals(dependency.getScope())) {
+
+                boolean dont = false;
+                for (Exclusion exclusion : exclusions) {
+                    if (dependency.getGroupId().equals(exclusion.getGroupId()) && dependency.getArtifactId().equals(exclusion.getArtifactId())) {
+                        dont = true;
+                    }
+                }
+
+                if (!dont) {
+                    for (int i = 0; i < level; i++)
+                        System.out.print(" ");
+                    System.out.println("Processing dependency: " + dependency);
+
+                    for (Dependency managedDependency : depManagement) {
+                        if (dependency.getGroupId().equals(managedDependency.getGroupId()) && dependency.getArtifactId().equals(managedDependency.getArtifactId())) {
+                            if (dependency.getType() != null && dependency.getType().equals(managedDependency.getType())) {
+                                if (dependency.getClassifier() != null && dependency.getClassifier().equals(managedDependency.getClassifier())) {
+                                    System.out.println("Managing " + dependency + " to " + managedDependency);
+                                    dependency.setVersion(managedDependency.getVersion());
+                                }
+                            }
+                        }
+                    }
+                    Artifact dependencyArtifact = artifactFactory.createArtifactWithClassifier(dependency.getGroupId(), dependency.getArtifactId(), dependency.getVersion(), dependency.getType(), dependency.getClassifier());
+                    resolver.resolve(dependencyArtifact, remoteRepositories, localRepository);
+
+                    MavenProject dependencyProject = projectBuilder.buildFromRepository(dependencyArtifact, (List<ArtifactRepository>) remoteRepositories, localRepository);
+                    ArrayList<Exclusion> newExclusions = new ArrayList<Exclusion>(exclusions);
+                    newExclusions.addAll(dependency.getExclusions());
+                    buildExtraClasspath(extraClasspath, dependencyProject, depManagement, newExclusions, level + 1);
                 }
             }
         }
