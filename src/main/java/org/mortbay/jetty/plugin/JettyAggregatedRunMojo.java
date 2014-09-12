@@ -354,7 +354,7 @@ public class JettyAggregatedRunMojo
 
         List<Dependency> dependencies = project.getDependencies();
         for (Dependency dependency : dependencies) {
-            if (!"provided".equals(dependency.getScope()) && !"test".equals(dependency.getScope())) {
+            if (!"provided".equals(dependency.getScope()) && !"test".equals(dependency.getScope()) && "false".equals(dependency.getOptional())) {
 
                 boolean dont = false;
                 for (Exclusion exclusion : exclusions) {
