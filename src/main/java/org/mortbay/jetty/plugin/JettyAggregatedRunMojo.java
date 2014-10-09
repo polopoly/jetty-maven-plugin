@@ -354,12 +354,13 @@ public class JettyAggregatedRunMojo
 
         List<Dependency> dependencies = project.getDependencies();
         for (Dependency dependency : dependencies) {
-            if (!"provided".equals(dependency.getScope()) && !"test".equals(dependency.getScope()) && "false".equals(dependency.getOptional())) {
+            if (!"provided".equals(dependency.getScope()) && !"test".equals(dependency.getScope()) && !"true".equals(dependency.getOptional())) {
 
                 boolean dont = false;
                 for (Exclusion exclusion : exclusions) {
                     if (dependency.getGroupId().equals(exclusion.getGroupId()) && dependency.getArtifactId().equals(exclusion.getArtifactId())) {
                         dont = true;
+                        System.out.println("Skipping due to exclusion: " + dependency);
                     }
                 }
 
@@ -386,6 +387,8 @@ public class JettyAggregatedRunMojo
                     newExclusions.addAll(dependency.getExclusions());
                     buildExtraClasspath(extraClasspath, dependencyProject, depManagement, newExclusions, level + 1);
                 }
+            } else {
+                System.out.println("Skipping due to scope: " + dependency + " | optional: " + dependency.getOptional());
             }
         }
     }
