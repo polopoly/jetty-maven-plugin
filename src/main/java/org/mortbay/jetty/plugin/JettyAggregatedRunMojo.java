@@ -48,6 +48,11 @@ import org.eclipse.jetty.util.Scanner;
 public class JettyAggregatedRunMojo
     extends AbstractEmbeddedJettyMojo
 {
+    // These things will disturb jetty itself and will be filtered out when using the injectLocalProject flag
+    private final static List<String> BANNED_INCLUSIONS = Arrays.asList(
+            "org.apache.httpcomponents:httpclient",
+            "org.mortbay.jetty:jetty");
+
     final WebApplicationScanBuilder scanBuilder = new WebApplicationScanBuilder();
     final WebApplicationConfigBuilder configBuilder = new WebApplicationConfigBuilder();
 
@@ -292,49 +297,6 @@ public class JettyAggregatedRunMojo
                         }
                     }
 
-                    /*if (extraDependencies != null) {
-                        StringBuffer extraClasspath = new StringBuffer();
-                        for (ArtifactData dependency : extraDependencies) {
-                            if (dependency.type == null) {
-                                dependency.type = "jar";
-                            }
-
-                            Artifact dependencyArtifact = artifactFactory.createArtifact(dependency.groupId,
-                                    dependency.artifactId,
-                                    dependency.version,
-                                    dependency.scope,
-                                    dependency.type);
-
-                            resolver.resolve(dependencyArtifact, remoteRepositories, localRepository);
-
-                            if (extraClasspath.length() > 0) {
-                                extraClasspath.append(":");
-                            }
-                            extraClasspath.append(dependencyArtifact.getFile().getAbsolutePath());
-
-                            Artifact pomArtifact = artifactFactory.createArtifact(dependency.groupId,
-                                    dependency.artifactId,
-                                    dependency.version,
-                                    dependency.scope,
-                                    "pom");
-
-                            resolver.resolve(dependencyArtifact, remoteRepositories, localRepository);
-
-                            MavenProject depProject = mavenProjectBuilder.buildFromRepository(pomArtifact, remoteRepositories, localRepository);
-                            Set<Artifact> depArtifacts = depProject.createArtifacts(artifactFactory, null, null);
-                            ArtifactResolutionResult arr = resolver.resolveTransitively(depArtifacts, pomArtifact, depProject.getManagedVersionMap(), localRepository, remoteRepositories, , filter);
-
-
-                            if (extraClasspath.length() > 0) {
-                                extraClasspath.append(":");
-                            }
-                            extraClasspath.append(dependencyArtifact.getFile().getAbsolutePath());
-                        }
-                        System.out.println("============== Adding extra classpath: " + extraClasspath.toString());
-                        if (extraClasspath.length() > 0) {
-                            jettyContext.setExtraClasspath(extraClasspath.toString());
-                        }
-                    }*/
                     getServer().addHandler(jettyContext);
 
                     getLog().info(String.format("Deploying '%s' for context '%s'", warFile.getAbsolutePath(), jettyContext.getContextPath()));
@@ -362,6 +324,10 @@ public class JettyAggregatedRunMojo
                         dont = true;
                         System.out.println("Skipping due to exclusion: " + dependency);
                     }
+                }
+                if (BANNED_INCLUSIONS.contains(dependency.getGroupId() + ":" + dependency.getArtifactId())) {
+                    dont = true;
+                    System.out.println("Skipping due to explicit ban: " + dependency);
                 }
 
                 if (!dont) {
