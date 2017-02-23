@@ -1,3 +1,143 @@
+
+jetty@codehaus-7.6.15-SNAPSHOT
+
+jetty@codehaus-7.6.14.v20131031 - 31 October 2013
+ + 417250 Fix JMXServiceTest's incompatibility with MBeanContainer unique name
+   changes
+
+jetty@codehaus-7.6.13.v20130916 - 16 September 2013
+
+jetty@codehaus-7.6.12.v20130726 - 26 July 2013
+ + 411252 jetty-runner hardcode sendServerVersion to true
+
+jetty@codehaus-7.6.11.v20130520 - 20 May 2013
+
+jetty@codehaus-7.6.10.v20130312 - 12 March 2013
+
+jetty@codehaus-7.6.9.v20130131 - 31 January 2013
+ + 391623 Add option to --stop to wait for target jetty to stop Integrating
+   with jetty-runner; ensure jetty-maven-plugin obeys daemon mode
+ + 395574 jstl jars not inside jetty-runner
+ + 397114 run-forked waitForChild=false can lock up
+
+jetty@codehaus-7.6.8.v20121106 - 06 November 2012
+ + 389670 ensure jars from overlayed wars are scanned
+ + 393291 Confusing log entry about (non) existing webAppSourceDirectory
+ + JETTY-1550 virtual WEB-INF not created if project has overlays
+
+jetty@codehaus-7.6.7.v20120910 - 10 September 2012
+
+jetty@codehaus-7.6.6.v20120903 - 03 September 2012
+ + 385651 Message 'Address already in use' not specific enough
+ + 386531 setuid library name should not be hardcoded
+ + JETTY-991 Delay exit of parent until forked jetty started
+ + JETTY-1482 undoing previous incorrect fix: server id is Server
+ + JETTY-1516 allow context xml to override pom config for jetty:run-forked,
+   same as other jetty mojos
+
+jetty@codehaus-7.6.5.v20120716 - 16 July 2012
+ + JETTY-991 added <waitForChild> to control behaviour of jetty:run-forked
+ + JETTY-1507 Allow SystemProperties to override commandline
+ + JETTY-1522 jetty:run-war <webApp> definition conflicts with <war>
+ + JETTY-1526 SetUID leaves user.name and user.home set to root and /root
+   (respectively)
+
+jetty@codehaus-7.6.4.v20120524 - 24 May 2012
+ + JETTY-1512 Add jetty-websocket dependency to jetty-maven-plugin
+ + JETTY-1516 allow multiple resource dirs for jetty:run-forked - use
+   <resourceBases>
+
+jetty@codehaus-7.6.3.v20120416 - 16 April 2012
+ + JETTY-1487 umask setting for SetUID can't be set to 0
+ + JETTY-1497 jetty-jspc-maven-plugin has problems with spaces in classpath
+   filenames
+ + JETTY-1498 Add ability to put <scope>provided</scope> artifacts on system
+   classpath for jetty-jspc-maven-plugin
+
+jetty@codehaus-7.6.2.v20120308 - 08 March 2012
+ + JETTY-1486 jsf jar files are not scanned for .tld files with
+   jetty-maven-plugin
+ + JETTY-1491 jetty-maven-plugin ignores <useTestClasspath>
+
+jetty@codehaus-7.6.1.v20120215 - 15 February 2012
+ + 370386 Remove META-INF from hightide distro
+ + JETTY-1480 jspc-maven-plugin does not find jstl tags
+ + JETTY-1481 Change jetty-atomikos to be type jar so its dependencies can be
+   used in jetty-hightide
+ + JETTY-1482 fix path in setuid configuration
+
+jetty@codehaus-7.6.0.v20120127 - 27 January 2012
+
+jetty@codehaus-7.6.0.RC5 - 20 January 2012
+ + 368633 fixed configure.dtd resource mappings
+
+jetty@codehaus-7.6.0.RC4 - 13 January 2012
+ + JETTY-1472 NPE in JettyWebAppContext.getResource when uri starts with ..
+
+jetty@codehaus-7.6.0.RC3 - 05 January 2012
+ + JETTY-1469 update version of jsp for jetty-jspc-maven-plugin
+
+jetty@codehaus-7.6.0.RC2 - 22 December 2011
+ + JETTY-1405 create jetty maven plugin "start" goal for use with execution
+   bindings
+
+jetty@codehaus-7.6.0.RC1 - 04 December 2011
+
+jetty@codehaus-7.6.0.RC0 - 30 November 2011
+ + JETTY-1448 support setting attributes on webapp context for jetty-ant
+ + JETTY-1449 Unable to execute "run-forked" goal with overlays
+ + JETTY-1450 Unable to execute "run-forked" goal under Windows
+ + JETTY-1451 Update version of cometd to 2.4.0.RC1 for hightide
+ + JETTY-1456 jetty-runner in jetty-7 uses different jsp to jetty-7 distro
+
+jetty@codehaus-7.5.4.v20111024 - 24 October 2011
+ + JETTY-1443 Corrected property names in jetty-setuid.xml
+ + JETTY-1446 jetty-setuid is not unpacked to jetty-hightide
+
+jetty@codehaus-7.5.3.v20111011 - 11 October 2011
+
+jetty@codehaus-7.5.2.v20111006 - 06 October 2011
+ + 353157 Pass jvm args to forked jetty
+ + 358319 update appassembler archetype
+ + 358784 JSP broken on Java 1.5
+ + 360061 Deprecate jetty-maven-plugin params in favour of using <webAppConfig>
+   to configure
+ + JETTY-429 allow <scope>provided</scope> for jetty-maven-plugin
+ + JETTY-706 add <excludedGoals> to jetty-maven-plugin configuration
+ + JETTY-991 JETTY-1429
+ + JETTY-1334 maven-jetty-plugin run-exploded and ContextHandlers are not
+   working together
+ + JETTY-1419 remove jetty-monitor as it has been moved to eclipse
+ + JETTY-1427 useTestClasspath option doesn't work with frameworks like JSF
+   that scan web-inf\classes for annotated classes
+ + JETTY-1434 Update jetty-maven-plugin jsp version
+ + JETTY-1437 test-jndi-webapp is missing the injection for datasource
+
+jetty@codehaus-7.5.1.v20110908 - 08 September 2011
+ + JETTY-1419 remove jetty-monitor from codehaus side
+ + JETTY-1425 jboss-jetty sar uses old slf4j libs
+
+jetty@codehaus-7.5.0.v20110901 - 01 September 2011
+ + JETTY-1218 delete example extra webapp, too much bitrot
+
+jetty@codehaus-7.5.0.RC2 - 30 August 2011
+ + 293739 Deprecate static Jetty Log usage in favor of named logs
+
+jetty@codehaus-7.5.0.RC1 - 19 August 2011
+
+jetty@codehaus-7.5.0.RC0 - 15 August 2011
+ + Fix test-jaas-webapp/authfail.html format
+ + JETTY-991 Implement run-forked mojo for jetty-maven-plugin
+ + JETTY-1383 Provide Debian and RPM binary distribution of Core Jetty
+ + JETTY-1393 add jetty-jboss session manager methods
+ + JETTY-1394 Do not use deprecated method File.toURL()
+ + JETTY-1399 Add more setters for jetty-maven-plugin configuration parameters
+ + JETTY-1401 migrate jetty-jmx-ws module
+ + JETTY-1404 Allow configuring resource path precedence in jetty-maven-plugin
+ + JETTY-1412 runner ignores log config from config
+ + 352512 setup archetypes into jetty codehaus build
+ + 353932 add file server archetype
+
 jetty@codehaus 7.4.5.20110725
  + JETTY-1383 Provide Debian and RPM binary distribution of Core Jetty 
 
