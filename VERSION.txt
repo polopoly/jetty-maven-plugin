@@ -1,5 +1,37 @@
+jetty@codehaus-7.6.21.v20160908 - 8 September 2016
+ + 868 remove static throwable fix for java 1.7 usage
 
-jetty@codehaus-7.6.15-SNAPSHOT
+jetty@codehaus-7.6.20.v20160902 - 2 September 2016
+ + 868 backport static throwables fix
+
+jetty@codehaus-7.6.19.v20160209 - 9 February 2016
+ + 486167 ServletInputStream.available() broken for pipelined requests.
+
+jetty@codehaus-7.6.18.v20150929 - 29 September 2015
+ + 475851 AbstractGenerator.setResponse can produce an invalid Response header
+ + 477948 Connections leaked when response contains Connection: close header.
+
+jetty@codehaus-7.6.17.v20150415 - 15 April 2015
+ + 409788 Large POST body causes java.lang.IllegalStateException: SENDING =>
+   HEADERS.
+ + 433802 check EOF in send1xx
+ + 442839 highly fragmented websocket messages can result in corrupt binary
+   messages
+ + 445953 fixed loop closing stream write
+
+jetty@codehaus-7.6.16.v20140903 - 03 September 2014
+ + 409788 Large POST body causes java.lang.IllegalStateException: SENDING =>
+   HEADERS.
+ + 433802 check EOF in send1xx
+ + 442839 highly fragmented websocket messages can result in corrupt binary
+messages
+
+jetty@codehaus-7.6.15.v20140411 - 11 April 2014
+ + 422137 Added maxQueued to QueuedThreadPool MBean
+ + 425038 WebSocketClient leaks file handles when exceptions are thrown from
+   open()
+ + 425551 Memory Leak in SelectConnector$ConnectTimeout.expired.
++ 432452 ConnectHandler does not timeout sockets in FIN_WAIT2.
 
 jetty@codehaus-7.6.14.v20131031 - 31 October 2013
  + 417250 Fix JMXServiceTest's incompatibility with MBeanContainer unique name

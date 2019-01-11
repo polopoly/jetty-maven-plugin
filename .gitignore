@@ -8,3 +8,4 @@ target/
 *.diff
 *.patch
 .idea
+*.iml
