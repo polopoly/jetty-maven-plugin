@@ -28,6 +28,11 @@
       <name>Polopoly Product</name>
       <url>http://maven.polopoly.com/nexus/content/repositories/polopoly-product</url>
     </repository>
+    <snapshotRepository>
+      <id>polopoly-product-snapshots</id>
+      <name>Polopoly Product Snapshots</name>
+      <url>http://maven.polopoly.com/nexus/content/repositories/polopoly-product-snapshots</url>
+    </snapshotRepository>
   </distributionManagement>
 
   <build>
