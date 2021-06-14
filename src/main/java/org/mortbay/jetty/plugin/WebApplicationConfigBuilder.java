@@ -31,6 +31,15 @@ public class WebApplicationConfigBuilder
         JettyWebAppContext webAppConfig = new JettyWebAppContext();
 
         Plugin plugin = project.getPlugin("com.polopoly.jetty:jetty-maven-plugin");
+        if (plugin == null) {
+            final String msg = String.format(
+                    "Project '%s:%s' does not have the plugin 'com.polopoly.jetty:jetty-maven-plugin' configured",
+                    project.getGroupId(),
+                    project.getArtifactId()
+            );
+            LOG.log(Level.SEVERE, msg);
+            throw new RuntimeException(msg);
+        }
         Xpp3Dom config = (Xpp3Dom) plugin.getConfiguration();
         applyPOMWebAppConfig(config, webAppConfig);
 
