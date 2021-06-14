@@ -13,7 +13,7 @@
   <properties>
     <mavenVersion>3.0.3</mavenVersion>
     <pluginToolsVersion>2.9</pluginToolsVersion>
-    <jetty-version>7.6.21.v20160908</jetty-version>
+    <jetty-version>9.4.34.v20201102</jetty-version>
   </properties>
 
   <scm>
