@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.polopoly.jetty</groupId>
   <artifactId>jetty-maven-plugin</artifactId>
-  <version>7.6.21-polopoly-1.1-SNAPSHOT</version>
+  <version>7.6.21-polopoly-1.1</version>
   <packaging>maven-plugin</packaging>
   <name>Jetty Maven Plugin with multi context support</name>
 
@@ -19,7 +19,7 @@
   <scm>
     <connection>scm:git:git://github.com/polopoly/jetty-maven-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:polopoly/jetty-maven-plugin.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>jetty-maven-plugin-7.6.21-polopoly-1.1</tag>
   </scm>
 
   <distributionManagement>
