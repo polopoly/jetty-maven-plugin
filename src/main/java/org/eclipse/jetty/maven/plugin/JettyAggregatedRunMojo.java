@@ -18,32 +18,61 @@
 
 package org.eclipse.jetty.maven.plugin;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
+import java.util.logging.LogManager;
 import java.util.stream.Collectors;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.execution.MavenSession;
+import org.apache.maven.execution.ProjectDependencyGraph;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Execute;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.DefaultProjectBuildingRequest;
+import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectBuildingRequest;
+import org.apache.maven.shared.transfer.artifact.DefaultArtifactCoordinate;
+import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
+import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolverException;
+import org.eclipse.jetty.maven.plugin.utils.FilesHelper;
 import org.eclipse.jetty.maven.plugin.utils.MavenProjectHelper;
+import org.eclipse.jetty.maven.plugin.utils.WebApplicationConfigBuilder;
+import org.eclipse.jetty.maven.plugin.utils.WebApplicationScanBuilder;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.IncludeExcludeSet;
+import org.eclipse.jetty.util.Scanner;
+import org.eclipse.jetty.util.Scanner.BulkListener;
 import org.eclipse.jetty.util.StringUtil;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceCollection;
+import org.eclipse.jetty.webapp.Configuration;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 /**
@@ -65,8 +94,12 @@ import org.eclipse.jetty.webapp.WebAppContext;
  *
  * Runs jetty directly from a maven project
  */
-@Mojo(name = "run-all", requiresDependencyResolution = ResolutionScope.TEST)
-@Execute(phase = LifecyclePhase.TEST_COMPILE)
+@Mojo(
+    name = "run-all",
+    aggregator = true,
+    requiresDependencyResolution = ResolutionScope.RUNTIME
+)
+//@Execute(phase = LifecyclePhase.TEST_COMPILE)
 public class JettyAggregatedRunMojo extends AbstractJettyMojo
 {
     public static final String DEFAULT_WEBAPP_SRC = "src" + File.separator + "main" + File.separator + "webapp";
@@ -143,10 +176,69 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
 
     protected Resource originalBaseResource;
 
+    @Parameter(defaultValue = "${session}", required = true, readonly = true)
+    private MavenSession session;
+
+    /**
+     * The project's remote repositories to use for the resolution.
+     */
+    @Parameter(defaultValue = "${project.remoteArtifactRepositories}", required = true, readonly = true)
+    private List<ArtifactRepository> remoteRepositories;
+
+    @Component
+    private ArtifactResolver artifactResolver;
+
+    /**
+     * A list of submodules that should be excluded from the
+     * list of web applications started by Jetty. This is a
+     * list of simple submodule names like 'webapp-front',
+     * not artifact coordinates.
+     *
+     */
+    @Parameter
+    private String[] excludedWebApps;
+
+    /**
+     * List of other contexts to set up.
+     * Typically, these contexts are web applications not available as Maven submodules
+     * in the current project, but that are instead deployed in a Maven repository.
+     * See the "Jetty Maven plugin" page in the Nitro documentation for information
+     * about the context handler structure.
+     */
+    @Parameter
+    private ContextHandler[] externalArtifactContextHandlers;
+
+    /**
+     * Configure java util logging properties. This parameter has precedence
+     * over parameter loggingPropertiesFile.
+     */
+    @Parameter
+    private Properties loggingProperties = new Properties();
+
+    /**
+     * Configure java util logging via logging properties file. It may be
+     * overridden by parameter loggingProperties.
+     */
+    @Parameter(defaultValue = "${project.loggingProperties.file}", required = true, readonly = true)
+    private File loggingPropertiesFile;
+
+    /**
+     * Configure it to true if you also want to configure the main webapp (like the 'run' mojo).
+     */
+    @Parameter(defaultValue = "false")
+    protected boolean startMainWebapp;
+
+    final WebApplicationScanBuilder scanBuilder = new WebApplicationScanBuilder();
+    final WebApplicationConfigBuilder configBuilder = new WebApplicationConfigBuilder();
+
+    final Map<String, Scanner> scanners = new HashMap<>();
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException
     {
+        supportedPackagings = Arrays.asList("war", "pom");
         warPluginInfo = new WarPluginInfo(project);
+        applyLoggingProperties();
         super.execute();
     }
 
@@ -225,8 +317,22 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
     @Override
     public void configureWebApplication() throws Exception
     {
-        super.configureWebApplication();
+        removeAnnotationConfiguration();
 
+        deployWebApplications();
+
+        if (startMainWebapp) {
+            super.configureWebApplication();
+            configureMainWebApplication();
+        }
+    }
+
+    /**
+     * Copied from the previous configureWebApplication, this is the same code used by {@link JettyRunMojo#configureWebApplication()}.
+     *
+     * @throws Exception if something is wrong.
+     */
+    private void configureMainWebApplication() throws Exception {
         //Set up the location of the webapp.
         //There are 2 parts to this: setWar() and setBaseResource(). On standalone jetty,
         //the former could be the location of a packed war, while the latter is the location
@@ -256,12 +362,12 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
 
         MavenProjectHelper mavenProjectHelper = new MavenProjectHelper(project);
         List<File> webInfLibs = getWebInfLibArtifacts(project.getArtifacts()).stream()
-            .map(a ->
-            {
-                Path p = mavenProjectHelper.getArtifactPath(a);
-                getLog().debug("Artifact " + a.getId() + " loaded from " + p + " added to WEB-INF/lib");
-                return p.toFile();
-            }).collect(Collectors.toList());
+                                                                             .map(a ->
+                                                                             {
+                                                                                 Path p = mavenProjectHelper.getArtifactPath(a);
+                                                                                 getLog().debug("Artifact " + a.getId() + " loaded from " + p + " added to WEB-INF/lib");
+                                                                                 return p.toFile();
+                                                                             }).collect(Collectors.toList());
         getLog().debug("WEB-INF/lib initialized (at root)");
         webApp.setWebInfLib(webInfLibs);
 
@@ -271,16 +377,17 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
             //Has an explicit web.xml file been configured to use?
             if (webXml != null)
             {
-                Resource r = Resource.newResource(webXml);
-                if (r.exists() && !r.isDirectory())
-                {
-                    webApp.setDescriptor(r.toString());
+                try (Resource r = Resource.newResource(webXml)) {
+                    if (r.exists() && !r.isDirectory()) {
+                        webApp.setDescriptor(r.toString());
+                    }
                 }
             }
 
             //Still don't have a web.xml file: try the resourceBase of the webapp, if it is set
             if (webApp.getDescriptor() == null && webApp.getBaseResource() != null)
             {
+                //noinspection resource
                 Resource r = webApp.getBaseResource().addPath("WEB-INF/web.xml");
                 if (r.exists() && !r.isDirectory())
                 {
@@ -305,6 +412,112 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
 
         getLog().info("web.xml file = " + webApp.getDescriptor());
         getLog().info("Webapp directory = " + webAppSourceDirectory.getCanonicalPath());
+    }
+
+    private void removeAnnotationConfiguration() {
+        // the AnnotationConfiguration will warn about the same classes defined multiple times
+        // and we have plenty of them...so for this mojo we will remove the annotation discovery.
+        // the annotations is something specific to Jetty but we normally deploy to tomcat so it
+        // makes sense just to disable it, for reference this is the documentation for the feature
+        // in jetty 9: http://www.eclipse.org/jetty/documentation/jetty-9/index.html#annotations
+        final String[] configurationClasses = (String[]) server.getAttribute(Configuration.ATTR);
+        if (configurationClasses != null) {
+            final List<String> confClass = new ArrayList<>(Arrays.asList(configurationClasses));
+            confClass.remove("org.eclipse.jetty.annotations.AnnotationConfiguration");
+            server.setAttribute(Configuration.ATTR, confClass.toArray(new String[] {}));
+        }
+    }
+
+    private void deployWebApplications() throws Exception {
+        scanners.clear();
+        Set<String> subprojects = new HashSet<>();
+
+        final List<String> projectJars = new ArrayList<>();
+        for (MavenProject subProject : session.getProjects()) {
+            if (subProject.equals(project)) {
+                continue;
+            }
+            if ("jar".equals(subProject.getPackaging())) {
+                projectJars.add(subProject.getGroupId() + ":" + subProject.getArtifactId());
+            }
+        }
+        getLog().debug("projectJars " + projectJars);
+        final Map<String, JettyWebAppContext> contextMap = new HashMap<>();
+        for (MavenProject subProject : session.getProjects()) {
+            if (subProject.equals(project)) {
+                continue;
+            }
+            final String projectId = subProject.getGroupId() + ":" + subProject.getArtifactId();
+            if ("war".equals(subProject.getPackaging()) && !isAnExcludedWebApp(subProject)) {
+                final JettyWebAppContext webAppConfig = configBuilder.configureWebApplication(
+                    contextMap.getOrDefault(projectId, new JettyWebAppContext()),
+                    subProject,
+                    getLog());
+                contextMap.putIfAbsent(projectId, webAppConfig);
+                subprojects.add(webAppConfig.getContextPath());
+
+                final List<File> allFiles = removeDependencyJars(webAppConfig, subProject);
+
+                getLog().info("\n=========================================================================="
+                    + "\nInjecting : " + subProject.getName() + "\n\n" +  configBuilder.toInfoString(webAppConfig)
+                    + "\n==========================================================================");
+
+                addWebApplication(webAppConfig);
+
+                if (getScanIntervalSeconds() > 0) {
+                    final List<File> scanningFiles = new ArrayList<>(allFiles);
+                    Optional.ofNullable(webAppConfig.getClasses())
+                            .ifPresent(scanningFiles::add);
+                    FilesHelper.removeDuplicates(scanningFiles);
+
+                    getLog().debug("Scanning: " + scanningFiles);
+
+                    final Scanner scanner = new Scanner();
+                    scanner.addListener((BulkListener) changes -> {
+                        try {
+                            getLog().info("Detected changes: " + changes);
+
+                            scanners.get(projectId).stop();
+
+                            getLog().info("Stopping webapp " + projectId + " ...");
+                            contextMap.get(projectId).stop();
+
+                            getLog().info("Reconfiguring webapp " + projectId + " ...");
+
+                            final JettyWebAppContext appConfig = configBuilder.configureWebApplication(
+                                contextMap.getOrDefault(projectId, new JettyWebAppContext()),
+                                subProject,
+                                getLog());
+                            removeDependencyJars(appConfig, subProject);
+
+                            getLog().info("Restarting webapp " + projectId + " ...");
+                            appConfig.start();
+                            scanners.get(projectId).start();
+                            getLog().info("Restart " + projectId + " completed at " + new Date());
+                        } catch (Exception e) {
+                            getLog().error("Error reconfiguring/restarting webapp " + projectId + " after change in watched files", e);
+                        }
+                    });
+
+                    scanner.setReportExistingFilesOnStartup(false);
+                    scanner.setScanInterval(getScanIntervalSeconds());
+                    scanner.setScanDirs(scanningFiles);
+                    //scanner.setRecursive(true);
+                    scanner.setScanDepth(Scanner.MAX_SCAN_DEPTH);
+
+                    getLog().debug("Scanning: " + scanner.getScannables());
+
+                    scanner.start();
+                    scanners.put(projectId, scanner);
+                }
+            }
+        }
+
+        if (externalArtifactContextHandlers != null) {
+            configureWarArtifactsForExtraContextHandlers(subprojects);
+        }
+
+        getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
     }
 
     @Override
@@ -372,9 +585,9 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
                     scanner.addFile(f.toPath());
             }
         }
-        
+
         scanner.addFile(project.getFile().toPath());
-        
+
         //handle the extra scan patterns
         if (scanTargetPatterns != null)
         {
@@ -468,6 +681,11 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
         webApp.start();
         startScanner();
         getLog().info("Restart completed at " + new Date().toString());
+    }
+
+    @Override
+    public boolean isScanningEnabled() {
+        return startMainWebapp && super.isScanningEnabled();
     }
 
     private Collection<Artifact> getWebInfLibArtifacts(Set<Artifact> artifacts)
@@ -680,4 +898,179 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
         }
         return ret.toString();
     }
+
+    /**
+     * Resolve an Artifact from remote repo if necessary.
+     *
+     * @param groupId the groupId of the artifact
+     * @param artifactId the artifactId of the artifact
+     * @param version the version of the artifact
+     * @param type the extension type of the artifact eg "zip", "jar"
+     * @return the artifact from the local or remote repo
+     * @throws ArtifactResolverException in case of an error while resolving the artifact
+     */
+    public Artifact resolveArtifact(final String groupId,
+                                    final String artifactId,
+                                    final String version,
+                                    final String type)
+        throws ArtifactResolverException
+    {
+        DefaultArtifactCoordinate coordinate = new DefaultArtifactCoordinate();
+        coordinate.setGroupId(groupId);
+        coordinate.setArtifactId(artifactId);
+        coordinate.setVersion(version);
+        coordinate.setExtension(type);
+
+        ProjectBuildingRequest buildingRequest =
+            new DefaultProjectBuildingRequest(session.getProjectBuildingRequest());
+
+        buildingRequest.setRemoteRepositories(remoteRepositories);
+
+        return artifactResolver.resolveArtifact(buildingRequest, coordinate).getArtifact();
+    }
+
+    private List<File> removeDependencyJars(final JettyWebAppContext webAppConfig,
+                                            final MavenProject subProject) throws Exception {
+        List<File> dependencyOutputLocations = new ArrayList<>();
+        List<File> excludedFiles = new ArrayList<>();
+        Set<Artifact> artifacts = subProject.getArtifacts();
+
+        for (Artifact artifact : artifacts) {
+            MavenProject artifactProject = getLocalDownstreamProjectForDependency(artifact, getProject());
+            if (artifactProject != null) {
+                dependencyOutputLocations.add(new File(artifactProject.getBuild().getOutputDirectory()));
+                excludedFiles.add(artifact.getFile());
+            }
+        }
+
+        getLog().debug("dependencyOutputLocations " + dependencyOutputLocations);
+        getLog().debug("excludedFiles " + excludedFiles);
+
+        List<File> files =
+            scanBuilder.setupScannerFiles(webAppConfig,
+                Collections.singletonList(subProject.getFile()),
+                Collections.emptyList());
+
+        final List<File> allFiles = new ArrayList<>();
+        allFiles.addAll(dependencyOutputLocations); // JUST ADDED THIS
+        allFiles.addAll(webAppConfig.getWebInfClasses());
+        allFiles.addAll(files);
+
+        FilesHelper.removeList(allFiles, excludedFiles);
+
+        webAppConfig.setWebInfLib(allFiles);
+        FilesHelper.removeDuplicates(webAppConfig.getWebInfLib());
+        FilesHelper.removeList(webAppConfig.getWebInfLib(), excludedFiles);
+
+        getLog().debug("webInfLib " + webAppConfig.getWebInfLib());
+
+        return allFiles;
+    }
+
+    private void configureWarArtifactsForExtraContextHandlers(final Set<String> skipContexts)
+        throws Exception
+    {
+        for (Handler contextHandler : externalArtifactContextHandlers) {
+            if (contextHandler instanceof org.mortbay.jetty.plugin.JettyWebAppContext) {
+                getLog().warn("This class " + contextHandler.getClass().getName() + " is deprecated! You should " +
+                    "use " + JettyWebAppContext.class.getName());
+            }
+            if (contextHandler instanceof JettyWebAppContext) {
+                JettyWebAppContext jettyContext = (JettyWebAppContext) contextHandler;
+
+                ArtifactData warArtifact = jettyContext.getWarArtifact();
+
+                if (warArtifact != null) {
+                    if (skipContexts.contains(jettyContext.getContextPath())) {
+                        getLog().info(String.format("Not deploying '%s' for context '%s' since it is already handled by sub-project",
+                            warArtifact, jettyContext.getContextPath()));
+                        continue;
+                    }
+
+                    final Artifact artifact = resolveArtifact(
+                        warArtifact.groupId,
+                        warArtifact.artifactId,
+                        warArtifact.version,
+                        warArtifact.type
+                    );
+
+                    final File warFile = artifact.getFile();
+                    jettyContext.setWar(warFile.getAbsolutePath());
+                    addWebApplication(jettyContext);
+
+                    getLog().info(String.format("Deploying '%s' for context '%s'", warFile.getAbsolutePath(), jettyContext.getContextPath()));
+                }
+            }
+        }
+    }
+
+    private MavenProject getLocalDownstreamProjectForDependency(final Artifact artifact,
+                                                                final MavenProject topProject)
+    {
+        ProjectDependencyGraph projectDependencyGraph = session.getProjectDependencyGraph();
+        List<MavenProject> downstreamProjects = projectDependencyGraph.getDownstreamProjects(topProject, true);
+
+        for (MavenProject mavenProject : downstreamProjects) {
+            if (mavenProject.getPackaging().equals("jar")) {
+                if (artifact.getArtifactId().equals(mavenProject.getArtifactId()) &&
+                    artifact.getGroupId().equals(mavenProject.getGroupId()) &&
+                    artifact.getVersion().equals(mavenProject.getVersion())) {
+
+                    return mavenProject;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private void addWebApplication(WebAppContext webapp) throws Exception {
+        ServerSupport.addWebApplication(getServer(), webapp);
+    }
+
+    private int getScanIntervalSeconds() {
+        return scanIntervalSeconds;
+    }
+
+    private MavenProject getProject() {
+        return project;
+    }
+
+    private Server getServer() {
+        return server;
+    }
+
+    private void applyLoggingProperties()
+        throws MojoFailureException
+    {
+        try {
+            if (!loggingProperties.isEmpty()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                loggingProperties.store(baos, "Logging properties");
+                try (InputStream is = new ByteArrayInputStream(baos.toByteArray())) {
+                    LogManager.getLogManager().readConfiguration(is);
+                }
+            } else if (loggingPropertiesFile != null) {
+                try (InputStream is = new BufferedInputStream(Files.newInputStream(loggingPropertiesFile.toPath()))) {
+                    LogManager.getLogManager().readConfiguration(is);
+                }
+            }
+        } catch (IOException e) {
+            throw new MojoFailureException("Unable to apply logging properties", e);
+        }
+    }
+
+    private boolean isAnExcludedWebApp(final MavenProject project)
+    {
+        if (excludedWebApps != null) {
+            for (String excludedWebApp : excludedWebApps) {
+                if (project.getArtifactId().equals(excludedWebApp)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
 }

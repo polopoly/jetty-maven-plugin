@@ -147,7 +147,9 @@ public class ServerSupport
         ContextHandlerCollection contexts = findContextHandlerCollection(server);
         if (contexts == null)
             throw new IllegalStateException("ContextHandlerCollection is null");
-        contexts.addHandler(webapp);
+        if (webapp != null) {
+            contexts.addHandler(webapp);
+        }
     }
 
     public static ContextHandlerCollection findContextHandlerCollection(Server server)

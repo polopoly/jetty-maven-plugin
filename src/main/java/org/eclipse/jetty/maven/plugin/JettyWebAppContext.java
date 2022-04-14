@@ -123,6 +123,8 @@ public class JettyWebAppContext extends WebAppContext
     private boolean _isGenerateQuickStart;
     private PreconfigureDescriptorProcessor _preconfigProcessor;
 
+    private ArtifactData warArtifact;
+
     public JettyWebAppContext()
         throws Exception
     {
@@ -303,6 +305,14 @@ public class JettyWebAppContext extends WebAppContext
     public boolean isGenerateQuickStart()
     {
         return _isGenerateQuickStart;
+    }
+
+    public ArtifactData getWarArtifact() {
+        return warArtifact;
+    }
+
+    public void setWarArtifact(final ArtifactData warArtifact) {
+        this.warArtifact = warArtifact;
     }
 
     @Override
