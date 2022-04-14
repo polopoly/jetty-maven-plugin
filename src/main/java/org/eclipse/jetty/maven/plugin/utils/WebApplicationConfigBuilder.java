@@ -1,11 +1,9 @@
-package org.mortbay.jetty.plugin;
+package org.eclipse.jetty.maven.plugin.utils;
 
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.configuration.BeanConfigurationException;
@@ -17,19 +15,21 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.eclipse.jetty.maven.plugin.JettyWebAppContext;
+import org.eclipse.jetty.maven.plugin.Overlay;
+import org.eclipse.jetty.maven.plugin.OverlayConfig;
+import org.eclipse.jetty.maven.plugin.SelectiveJarResource;
 import org.eclipse.jetty.util.resource.Resource;
 
 public class WebApplicationConfigBuilder
 {
-    private static final Logger LOG = Logger.getLogger(WebApplicationConfigBuilder.class.getName());
-
     BeanConfigurator beanConfigurator = new DefaultBeanConfigurator();
 
-    public JettyWebAppContext configureWebApplication(MavenProject project, Log log)
+    public JettyWebAppContext configureWebApplication(final JettyWebAppContext webAppConfig,
+                                                      final MavenProject project,
+                                                      final Log log)
         throws Exception
     {
-        JettyWebAppContext webAppConfig = new JettyWebAppContext();
-
         Plugin plugin = project.getPlugin("com.polopoly.jetty:jetty-maven-plugin");
         if (plugin == null) {
             final String msg = String.format(
@@ -37,7 +37,7 @@ public class WebApplicationConfigBuilder
                     project.getGroupId(),
                     project.getArtifactId()
             );
-            LOG.log(Level.SEVERE, msg);
+            log.error(msg);
             throw new RuntimeException(msg);
         }
         Xpp3Dom config = (Xpp3Dom) plugin.getConfiguration();
@@ -60,16 +60,17 @@ public class WebApplicationConfigBuilder
             webAppConfig.setBaseResource(webAppSourceDirectoryResource);
         }
 
-        webAppConfig.setWebInfClasses(new ArrayList<File>() {{ add(classesDirectory); }});
-        addDependencies(project, webAppConfig);
+        webAppConfig.setClasses(classesDirectory);
+        addDependencies(project, log, webAppConfig);
 
         //if we have not already set web.xml location, need to set one up
         if (webAppConfig.getDescriptor() == null)
         {
             //Still don't have a web.xml file: try the resourceBase of the webapp, if it is set
-            if (webAppConfig.getDescriptor() == null && webAppConfig.getBaseResource() != null)
+            final Resource baseResource = webAppConfig.getBaseResource();
+            if (webAppConfig.getDescriptor() == null && baseResource != null)
             {
-                Resource r = webAppConfig.getBaseResource().addPath("WEB-INF/web.xml");
+                Resource r = baseResource.addPath("WEB-INF" + File.pathSeparator + "web.xml");
                 if (r.exists() && !r.isDirectory())
                 {
                     webAppConfig.setDescriptor(r.toString());
@@ -77,7 +78,7 @@ public class WebApplicationConfigBuilder
             }
 
             //Still don't have a web.xml file: finally try the configured static resource directory if there is one
-            if (webAppConfig.getDescriptor() == null && (webAppSourceDirectory != null))
+            if (webAppConfig.getDescriptor() == null)
             {
                 File f = new File (new File (webAppSourceDirectory, "WEB-INF"), "web.xml");
                 if (f.exists() && f.isFile())
@@ -110,16 +111,22 @@ public class WebApplicationConfigBuilder
     }
 
     private void addDependencies(final MavenProject project,
+                                 final Log log,
                                  final JettyWebAppContext webAppConfig)
         throws Exception
     {
-        List<File> dependencyFiles = new ArrayList<File>();
-        List<Resource> overlays = new ArrayList<Resource>();
+        List<File> dependencyFiles = new ArrayList<>();
+        List<Overlay> overlays = new ArrayList<>();
 
         for (Artifact artifact : project.getArtifacts())
         {
+            final OverlayConfig config = new OverlayConfig();
             if (artifact.getType().equals("war")) {
-                overlays.add(Resource.newResource("jar:"+artifact.getFile().toURL().toString()+"!/"));
+                SelectiveJarResource r = new SelectiveJarResource(new URL("jar:" + Resource.toURL(artifact.getFile()) + "!/"));
+                r.setIncludes(config.getIncludes());
+                r.setExcludes(config.getExcludes());
+                Overlay overlay = new Overlay(config, r);
+                overlays.add(overlay);
             } else if ((!Artifact.SCOPE_PROVIDED.equals(artifact.getScope()))
                     && (!Artifact.SCOPE_TEST.equals( artifact.getScope())))
             {
@@ -131,7 +138,7 @@ public class WebApplicationConfigBuilder
                                                        artifact.getArtifactId(),
                                                        artifact.getVersion());
 
-                    LOG.log(Level.WARNING, "Dependency '" + coordinates + "' does not exist in repository. Skipping!");
+                    log.warn("Dependency '" + coordinates + "' does not exist in repository. Skipping!");
                     continue;
                 }
 
@@ -145,6 +152,14 @@ public class WebApplicationConfigBuilder
 
     public String toInfoString(JettyWebAppContext webAppConfig)
     {
+        final List<File> classes = new ArrayList<>();
+        if (webAppConfig.getClasses() != null) {
+            classes.add(webAppConfig.getClasses());
+        }
+        if (webAppConfig.getWebInfClasses() != null) {
+            classes.addAll(webAppConfig.getWebInfClasses());
+        }
+        FilesHelper.removeDuplicates(classes);
         return String.format("Context path   : %s"
                 + "\nWork directory : %s"
                 + "\nWeb defaults   : %s"
@@ -157,7 +172,7 @@ public class WebApplicationConfigBuilder
                 (webAppConfig.getDefaultsDescriptor()  == null ? "jetty default" : webAppConfig.getDefaultsDescriptor()),
                 (webAppConfig.getOverrideDescriptors() == null ? "none" : webAppConfig.getOverrideDescriptors()),
                 (webAppConfig.getWar()                 == null ? "none" : webAppConfig.getWar()),
-                (webAppConfig.getWebInfClasses()       == null ? "none" : webAppConfig.getWebInfClasses()),
+                classes,
                 (webAppConfig.getDescriptor()          == null ? "none" : webAppConfig.getDescriptor()));
     }
 }
