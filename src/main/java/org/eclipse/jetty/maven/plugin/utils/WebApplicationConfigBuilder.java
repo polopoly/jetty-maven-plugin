@@ -60,7 +60,11 @@ public class WebApplicationConfigBuilder
             webAppConfig.setBaseResource(webAppSourceDirectoryResource);
         }
 
-        webAppConfig.setClasses(classesDirectory);
+        if (classesDirectory.exists()) {
+            webAppConfig.setClasses(classesDirectory);
+        } else {
+            log.debug(classesDirectory + " does not exists");
+        }
         addDependencies(project, log, webAppConfig);
 
         //if we have not already set web.xml location, need to set one up
