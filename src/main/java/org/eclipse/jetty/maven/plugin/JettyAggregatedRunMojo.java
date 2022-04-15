@@ -938,8 +938,13 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
         for (Artifact artifact : artifacts) {
             MavenProject artifactProject = getLocalDownstreamProjectForDependency(artifact, getProject());
             if (artifactProject != null) {
-                dependencyOutputLocations.add(new File(artifactProject.getBuild().getOutputDirectory()));
-                excludedFiles.add(artifact.getFile());
+                final File file = new File(artifactProject.getBuild().getOutputDirectory());
+                if (file.exists()) {
+                    dependencyOutputLocations.add(file);
+                    excludedFiles.add(artifact.getFile());
+                } else {
+                    getLog().debug("Dependency " + file.getAbsolutePath() + " does not exists!");
+                }
             }
         }
 
