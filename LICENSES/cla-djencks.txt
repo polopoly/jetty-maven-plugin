@@ -21,15 +21,15 @@ and commit it to the Jetty repository at
 svn+ssh://svn.jetty.codehaus.org/home/projects/jetty/scm/jetty
 at legal/cla-USERNAME.txt using your authenticated codehaus ssh 
 login. If you do not have commit privilege to the repository, please
-email the file to mortbay@mortbay.com.  If possible, digitally sign 
+email the file to eclipse@eclipse.com.  If possible, digitally sign 
 the committed file, otherwise also send a signed Agreement to MortBay.
 
 Please read this document carefully before signing and keep a copy for
 your records.
 
-  Full name: Matthew Purland 
-  E-Mail: m.purland@gmail.com
-  Mailing Address: 
+  Full name: David Jencks 
+  E-Mail:   david_jencks@yahoo.com
+  Mailing Address: 2215 SE 39th Ave, Portland OR 97214 USA
 
 You accept and agree to the following terms and conditions for Your
 present and future Contributions submitted to MortBay. In return, 
@@ -129,16 +129,13 @@ interest in and to Your Contributions.
    which you become aware that would make these representations
    inaccurate in any respect.
 
-Date: 12-15-2006
-Please sign: GPG
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1.4.3 (GNU/Linux)
+Date: 27 June 2008  
+Please sign: David Jencks
 
-iQEVAwUBRYMutJlB767GuE+vAQJvXgf6Awl3Px/KQm1zkf/ahZSYaDzAlXd6OjnT
-+LHa8HGvbKjOfZC9MFi1q0FLPoePM0qhGExKq2TpZab+OWD5+n+VDT4ZTxIGqeiz
-H5mGjwUmeBMd06I+9F+pGaphvN/mKjDPX/6JlpfkegnqafqZ/wcq0O5iOEmzu5yV
-MML8+m4Fc6Vdw4bS6JT1hNuNI8nwMjrv7HgQsBLbFVP5RpO2jHBsQEfBUmAGMJqq
-7vl/D6nfFqPEB7q7SS/iuAz5w0/LTxNrsuHgK8vy3FR7K4LxgWxrmkC2kD2t6pdm
-cxG7aksAVLMHfEwd89+tdRF3TN3M5k/apUSGQMEqsL0niuZ5Uw1vHA==
-=kutZ
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.7 (Darwin)
+
+iD8DBQFIZT2ToF6+5lbz4BsRAs3wAJ9puXC26Nr8nhFvTZ9oNwxDFV/DVACgnC8O
+VFUWPZrfLOJesKa0/rYNJlM=
+=jC7I
 -----END PGP SIGNATURE-----

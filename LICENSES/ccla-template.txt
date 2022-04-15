@@ -20,7 +20,7 @@ If you have not already done so, please complete this agreement and
 commit it to the Jetty repository at
 svn+ssh://svn.jetty.codehaus.org/home/projects/jetty/scm/jetty at
 LICENSES/ccla-CORPORATE-NAME.txt. If you do not have commit privilege to the 
-repository, please email the file to mortbay@mortbay.com. If possible, 
+repository, please email the file to eclipse@eclipse.com. If possible, 
 digitally sign the committed file, otherwise send a signed Agreement 
 to MortBay.
 

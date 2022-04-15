@@ -18,7 +18,7 @@ and commit it to the Jetty repository at
 svn+ssh://svn.jetty.codehaus.org/home/projects/jetty/scm/jetty
 at legal/cla-USERNAME.txt using your authenticated codehaus ssh 
 login. If you do not have commit privilege to the repository, please
-email the file to mortbay@mortbay.com.  If possible, digitally sign 
+email the file to eclipse@eclipse.com.  If possible, digitally sign 
 the committed file, otherwise also send a signed Agreement to MortBay.
 
 Please read this document carefully before signing and keep a copy for
