@@ -55,6 +55,27 @@ public class FilesHelper {
         }
     }
 
+    public static File ensureDirectoryExists(final File dir) {
+        if (!dir.exists()) {
+            getLog().debug("Creating " + dir);
+            if (!dir.mkdir()) {
+                getLog().warn("Cannot create " + dir);
+            }
+        }
+        return dir;
+    }
+
+    public static String toOSPath(final String...parts) {
+        final StringBuilder sb = new StringBuilder();
+        for (int idx = 0; idx < parts.length; idx++) {
+            if (idx != 0) {
+                sb.append(File.separator);
+            }
+            sb.append(parts[idx]);
+        }
+        return sb.toString();
+    }
+
     private static Log getLog() {
         return PluginLog.getLog();
     }

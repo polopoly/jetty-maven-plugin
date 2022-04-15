@@ -48,8 +48,8 @@ public class WebApplicationConfigBuilder
         }
 
         final File baseDir = project.getBasedir();
-        final File webAppSourceDirectory = new File(baseDir, "src/main/webapp");
-        final File classesDirectory = new File(baseDir, "target/classes");
+        final File webAppSourceDirectory = getWebAppSourceDirectory(log, baseDir);
+        final File classesDirectory = new File(baseDir, FilesHelper.toOSPath("target", "classes"));
 
         Resource webAppSourceDirectoryResource = Resource.newResource(webAppSourceDirectory.getCanonicalPath());
         if (webAppConfig.getWar() == null) {
@@ -84,7 +84,7 @@ public class WebApplicationConfigBuilder
             //Still don't have a web.xml file: finally try the configured static resource directory if there is one
             if (webAppConfig.getDescriptor() == null)
             {
-                File f = new File (new File (webAppSourceDirectory, "WEB-INF"), "web.xml");
+                File f = new File(new File(webAppSourceDirectory, "WEB-INF"), "web.xml");
                 if (f.exists() && f.isFile())
                 {
                    webAppConfig.setDescriptor(f.getCanonicalPath());
@@ -103,6 +103,17 @@ public class WebApplicationConfigBuilder
             webAppConfig.setDefaultsDescriptor(defaultsWebXMLUrl.toExternalForm());
         }
         return webAppConfig;
+    }
+
+    private File getWebAppSourceDirectory(final Log log, final File baseDir) {
+        File webAppSourceDirectory = new File(baseDir, FilesHelper.toOSPath("src", "main", "webapp"));
+        if (!webAppSourceDirectory.exists()) {
+            log.debug(webAppSourceDirectory + " does not exists");
+            webAppSourceDirectory = FilesHelper.ensureDirectoryExists(
+                new File(baseDir, FilesHelper.toOSPath("target", "webapp")));
+            FilesHelper.ensureDirectoryExists(new File(webAppSourceDirectory, "WEB-INF"));
+        }
+        return webAppSourceDirectory;
     }
 
     private void applyPOMWebAppConfig(final Xpp3Dom configuration,
