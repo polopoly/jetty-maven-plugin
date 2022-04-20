@@ -13,6 +13,7 @@
   <properties>
     <compiler.source>8</compiler.source>
     <compiler.target>8</compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <jetty.version>9.4.46.v20220331</jetty.version>
 
