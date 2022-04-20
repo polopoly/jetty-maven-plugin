@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EventListener;
 import java.util.HashMap;
 import java.util.List;
@@ -274,17 +275,14 @@ public class JettyWebAppContext extends WebAppContext
      */
     public void setResourceBases(String[] resourceBases)
     {
-        List<String> resources = new ArrayList<String>();
+        List<String> resources = new ArrayList<>();
         for (String rl : resourceBases)
         {
             String[] rs = StringUtil.csvSplit(rl);
-            for (String r : rs)
-            {
-                resources.add(r);
-            }
+            Collections.addAll(resources, rs);
         }
 
-        setBaseResource(new ResourceCollection(resources.toArray(new String[resources.size()])));
+        setBaseResource(new ResourceCollection(resources.toArray(new String[] {})));
     }
 
     public List<File> getWebInfLib()
