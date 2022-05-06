@@ -25,6 +25,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.eclipse.jetty.util.TopologicalSort;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 import org.eclipse.jetty.util.resource.Resource;
 
 /**
@@ -33,6 +35,8 @@ import org.eclipse.jetty.util.resource.Resource;
  */
 public class RelativeOrdering implements Ordering
 {
+    private static final Logger LOG = Log.getLogger(RelativeOrdering.class);
+
     protected MetaData _metaData;
 
     public RelativeOrdering(MetaData metaData)
@@ -86,7 +90,14 @@ public class RelativeOrdering implements Ordering
                 for (String name : fragment.getAfters())
                 {
                     Resource after = _metaData.getJarForFragment(name);
-                    sort.addDependency(jar, after);
+                    if (after == null) {
+                        // do not add the jar dependency if it refers to a webapp not yet
+                        // added (i.e. MetaData.addFragment has not been called yet for that
+                        // webapp, or it does not exist).
+                        LOG.debug("Jar '{}' depends on after '{}' which does not exists yet", jar.getName(), name);
+                    } else {
+                        sort.addDependency(jar, after);
+                    }
                     referenced.add(after);
                 }
 
@@ -95,7 +106,14 @@ public class RelativeOrdering implements Ordering
                 for (String name : fragment.getBefores())
                 {
                     Resource before = _metaData.getJarForFragment(name);
-                    sort.addDependency(before, jar);
+                    if (before == null) {
+                        // do not add the jar dependency if it refers to a webapp not yet
+                        // added (i.e. MetaData.addFragment has not been called yet for that
+                        // webapp, or it does not exist).
+                        LOG.debug("Jar '{}' depends on before '{}' which does not exists yet", jar.getName(), name);
+                    } else {
+                        sort.addDependency(before, jar);
+                    }
                     referenced.add(before);
                 }
 
