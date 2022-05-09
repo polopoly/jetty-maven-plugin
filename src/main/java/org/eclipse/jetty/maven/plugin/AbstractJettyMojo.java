@@ -42,6 +42,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.StringUtils;
+import org.eclipse.jetty.maven.plugin.utils.PidUtil;
 import org.eclipse.jetty.security.LoginService;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
@@ -448,7 +449,9 @@ public abstract class AbstractJettyMojo extends AbstractMojo
             // start Jetty
             this.server.start();
 
-            getLog().info("Started Jetty Server");
+            final int pid = PidUtil.getMyPid();
+
+            getLog().info("Started Jetty Server (PID " + pid + ")");
 
             if (dumpOnStart)
             {
