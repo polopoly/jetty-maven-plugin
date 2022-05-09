@@ -34,6 +34,7 @@ public class OverlayConfig
     private String targetPath;
     private String groupId;
     private String artifactId;
+    private String version;
     private String classifier;
     private List<String> includes;
     private List<String> excludes;
@@ -124,6 +125,9 @@ public class OverlayConfig
         node = root.getChild("artifactId");
         setArtifactId(node == null ? null : node.getValue());
 
+        node = root.getChild("version");
+        setVersion(node == null ? null : node.getValue());
+
         node = root.getChild("classifier");
         setClassifier(node == null ? null : node.getValue());
 
@@ -203,6 +207,14 @@ public class OverlayConfig
     public void setArtifactId(String artifactId)
     {
         this.artifactId = artifactId;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(final String version) {
+        this.version = version;
     }
 
     public String getClassifier()

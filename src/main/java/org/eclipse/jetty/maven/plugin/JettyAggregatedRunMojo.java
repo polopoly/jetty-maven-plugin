@@ -228,7 +228,7 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
     protected boolean startMainWebapp;
 
     final WebApplicationScanBuilder scanBuilder = new WebApplicationScanBuilder();
-    final WebApplicationConfigBuilder configBuilder = new WebApplicationConfigBuilder();
+    final WebApplicationConfigBuilder configBuilder = new WebApplicationConfigBuilder("com.polopoly.jetty:jetty-maven-plugin");
 
     final Map<String, Scanner> scanners = new HashMap<>();
 
@@ -452,6 +452,7 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
             if ("war".equals(subProject.getPackaging()) && !isAnExcludedWebApp(subProject)) {
                 final JettyWebAppContext webAppConfig = configBuilder.configureWebApplication(
                     contextMap.getOrDefault(projectId, new JettyWebAppContext()),
+                    session,
                     subProject,
                     getLog());
                 contextMap.putIfAbsent(projectId, webAppConfig);
@@ -492,6 +493,7 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
 
                             final JettyWebAppContext appConfig = configBuilder.configureWebApplication(
                                 contextMap.getOrDefault(projectId, new JettyWebAppContext()),
+                                session,
                                 subProject,
                                 getLog());
                             removeDependencyJars(appConfig, subProject);

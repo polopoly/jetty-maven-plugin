@@ -3,7 +3,9 @@ package org.eclipse.jetty.maven.plugin.utils;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.configuration.BeanConfigurationException;
@@ -11,6 +13,7 @@ import org.apache.maven.configuration.BeanConfigurationRequest;
 import org.apache.maven.configuration.BeanConfigurator;
 import org.apache.maven.configuration.DefaultBeanConfigurationRequest;
 import org.apache.maven.configuration.internal.DefaultBeanConfigurator;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
@@ -25,22 +28,31 @@ public class WebApplicationConfigBuilder
 {
     BeanConfigurator beanConfigurator = new DefaultBeanConfigurator();
 
+    private final String pluginName;
+
+    public WebApplicationConfigBuilder(final String pluginName) {
+        this.pluginName = pluginName;
+    }
+
     public JettyWebAppContext configureWebApplication(final JettyWebAppContext webAppConfig,
+                                                      final MavenSession session,
                                                       final MavenProject project,
                                                       final Log log)
         throws Exception
     {
-        Plugin plugin = project.getPlugin("com.polopoly.jetty:jetty-maven-plugin");
+        Plugin plugin = project.getPlugin(pluginName);
         if (plugin == null) {
             final String msg = String.format(
-                    "Project '%s:%s' does not have the plugin 'com.polopoly.jetty:jetty-maven-plugin' configured",
-                    project.getGroupId(),
-                    project.getArtifactId()
+                "Project '%s:%s' does not have the plugin '%s' configured",
+                project.getGroupId(),
+                project.getArtifactId(),
+                pluginName
             );
             log.error(msg);
             throw new RuntimeException(msg);
         }
         Xpp3Dom config = (Xpp3Dom) plugin.getConfiguration();
+        log.debug("plugin config " + config);
         applyPOMWebAppConfig(config, webAppConfig);
 
         if (webAppConfig.getContextPath() == null || webAppConfig.getContextPath().length() < 1) {
@@ -65,7 +77,7 @@ public class WebApplicationConfigBuilder
         } else {
             log.debug(classesDirectory + " does not exists");
         }
-        addDependencies(project, log, webAppConfig);
+        addDependencies(session, project, log, webAppConfig);
 
         //if we have not already set web.xml location, need to set one up
         if (webAppConfig.getDescriptor() == null)
@@ -87,7 +99,7 @@ public class WebApplicationConfigBuilder
                 File f = new File(new File(webAppSourceDirectory, "WEB-INF"), "web.xml");
                 if (f.exists() && f.isFile())
                 {
-                   webAppConfig.setDescriptor(f.getCanonicalPath());
+                    webAppConfig.setDescriptor(f.getCanonicalPath());
                 }
             }
         }
@@ -125,7 +137,8 @@ public class WebApplicationConfigBuilder
         beanConfigurator.configureBean(beanConfigurationRequest);
     }
 
-    private void addDependencies(final MavenProject project,
+    private void addDependencies(final MavenSession session,
+                                 final MavenProject project,
                                  final Log log,
                                  final JettyWebAppContext webAppConfig)
         throws Exception
@@ -133,29 +146,44 @@ public class WebApplicationConfigBuilder
         List<File> dependencyFiles = new ArrayList<>();
         List<Overlay> overlays = new ArrayList<>();
 
-        for (Artifact artifact : project.getArtifacts())
-        {
+        final Map<String, MavenProject> projectWars = new HashMap<>();
+        for (MavenProject subProject : session.getProjects()) {
+            if (subProject.equals(project)) {
+                continue;
+            }
+            if ("war".equals(subProject.getPackaging())) {
+                projectWars.put(subProject.getGroupId() + ":" + subProject.getArtifactId(), subProject);
+            }
+        }
+        for (Artifact artifact : project.getArtifacts()) {
+            log.debug("Artifact " + artifact);
             final OverlayConfig config = new OverlayConfig();
             if (artifact.getType().equals("war")) {
                 SelectiveJarResource r = new SelectiveJarResource(new URL("jar:" + Resource.toURL(artifact.getFile()) + "!/"));
                 r.setIncludes(config.getIncludes());
                 r.setExcludes(config.getExcludes());
-                // mnova: don't now why overlay were calculated with a configuration
-                // which would mean the overlay will not be unpacked, this will break
-                // the web.xml finding.
-                //Overlay overlay = new Overlay(config, r);
-                Overlay overlay = new Overlay(null, r);
+                final Overlay overlay;
+                final String key = artifact.getGroupId() + ":" + artifact.getArtifactId();
+                if (projectWars.containsKey(key)) {
+                    overlay = new Overlay(config, r);
+                } else {
+                    config.setGroupId(artifact.getGroupId());
+                    config.setArtifactId(artifact.getArtifactId());
+                    config.setClassifier(artifact.getClassifier());
+                    config.setVersion(artifact.getVersion());
+                    overlay = new Overlay(config, r);
+                }
                 overlays.add(overlay);
             } else if ((!Artifact.SCOPE_PROVIDED.equals(artifact.getScope()))
-                    && (!Artifact.SCOPE_TEST.equals( artifact.getScope())))
+                && (!Artifact.SCOPE_TEST.equals( artifact.getScope())))
             {
                 File dependencyFile = artifact.getFile();
 
                 if (dependencyFile == null || !dependencyFile.exists()) {
                     String coordinates = String.format("%s:%s:%s",
-                                                       artifact.getGroupId(),
-                                                       artifact.getArtifactId(),
-                                                       artifact.getVersion());
+                        artifact.getGroupId(),
+                        artifact.getArtifactId(),
+                        artifact.getVersion());
 
                     log.warn("Dependency '" + coordinates + "' does not exist in repository. Skipping!");
                     continue;
@@ -167,6 +195,7 @@ public class WebApplicationConfigBuilder
 
         webAppConfig.setOverlays(overlays);
         webAppConfig.setWebInfLib(dependencyFiles);
+        log.debug("overlays " + overlays);
     }
 
     public String toInfoString(JettyWebAppContext webAppConfig)
@@ -186,12 +215,12 @@ public class WebApplicationConfigBuilder
                 + "\nWeb source     : %s"
                 + "\nWeb classes    : %s"
                 + "\nWeb XML        : %s",
-                webAppConfig.getContextPath(),
-                (webAppConfig.getTempDirectory()       == null ? "determined at runtime" : webAppConfig.getTempDirectory()),
-                (webAppConfig.getDefaultsDescriptor()  == null ? "jetty default" : webAppConfig.getDefaultsDescriptor()),
-                (webAppConfig.getOverrideDescriptors() == null ? "none" : webAppConfig.getOverrideDescriptors()),
-                (webAppConfig.getWar()                 == null ? "none" : webAppConfig.getWar()),
-                classes,
-                (webAppConfig.getDescriptor()          == null ? "none" : webAppConfig.getDescriptor()));
+            webAppConfig.getContextPath(),
+            (webAppConfig.getTempDirectory()       == null ? "determined at runtime" : webAppConfig.getTempDirectory()),
+            (webAppConfig.getDefaultsDescriptor()  == null ? "jetty default" : webAppConfig.getDefaultsDescriptor()),
+            (webAppConfig.getOverrideDescriptors() == null ? "none" : webAppConfig.getOverrideDescriptors()),
+            (webAppConfig.getWar()                 == null ? "none" : webAppConfig.getWar()),
+            classes,
+            (webAppConfig.getDescriptor()          == null ? "none" : webAppConfig.getDescriptor()));
     }
 }

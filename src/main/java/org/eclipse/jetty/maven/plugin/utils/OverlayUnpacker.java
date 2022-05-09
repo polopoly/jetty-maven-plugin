@@ -50,7 +50,22 @@ public class OverlayUnpacker {
         for (final Overlay o : overlays) {
             //can refer to the current project in list of overlays for ordering purposes
             if (o.getConfig() != null && o.getConfig().isCurrentProject() && webApp.getBaseResource().exists()) {
+                if (!resourceBaseCollection.contains(webApp.getBaseResource())) {
                 resourceBaseCollection.add(webApp.getBaseResource());
+                }
+                // the overlay may be an overlay of a war build in the project
+                final Resource r = o.getResource();
+                if (r.exists() && !resourceBaseCollection.contains(r)) {
+                    resourceBaseCollection.add(r);
+                    // check if the new resource contains a valid web.xml
+                    if (StringUtil.isEmpty(webApp.getDescriptor())) {
+                        final Resource webXml = r.addPath("WEB-INF").addPath("web.xml");
+                        if (webXml.exists()) {
+                            getLog().debug("Set web.xml from inner overlay: " + webXml);
+                            webApp.setDescriptor(webXml.toString());
+                        }
+                    }
+                }
                 continue;
             }
 
