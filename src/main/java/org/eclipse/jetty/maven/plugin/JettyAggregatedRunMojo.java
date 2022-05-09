@@ -406,8 +406,10 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
         }
 
         //process any overlays and the war type artifacts
-        List<Overlay> overlays = getOverlays();
-        new OverlayUnpacker(project, webApp, getLog()).unpackOverlays(overlays); //this sets up the base resource collection
+        if  (webApp.isUnpackOverlays()) {
+            List<Overlay> overlays = getOverlays();
+            new OverlayUnpacker(project, webApp, getLog()).unpackOverlays(overlays); //this sets up the base resource collection
+        }
 
         getLog().info("web.xml file = " + webApp.getDescriptor());
         getLog().info("Webapp directory = " + webAppSourceDirectory.getCanonicalPath());
@@ -455,8 +457,10 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
                 contextMap.putIfAbsent(projectId, webAppConfig);
                 subprojects.add(webAppConfig.getContextPath());
 
-                final List<Overlay> overlays = getOverlays(warPluginInfo, webAppConfig);
-                new OverlayUnpacker(subProject, webAppConfig, getLog()).unpackOverlays(overlays);
+                if (webAppConfig.isUnpackOverlays()) {
+                    final List<Overlay> overlays = getOverlays(warPluginInfo, webAppConfig);
+                    new OverlayUnpacker(subProject, webAppConfig, getLog()).unpackOverlays(overlays);
+                }
 
                 final List<File> allFiles = removeDependencyJars(webAppConfig, subProject);
 

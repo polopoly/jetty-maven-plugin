@@ -101,6 +101,7 @@ public class JettyWebAppContext extends WebAppContext
     private Resource _quickStartWebXml;
     private String _originAttribute;
     private boolean _generateOrigin;
+    private boolean unpackOverlays = true;
 
     /**
      * Set the "org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern" with a pattern for matching jars on
@@ -235,6 +236,14 @@ public class JettyWebAppContext extends WebAppContext
     public void setGenerateOrigin(boolean generateOrigin)
     {
         _generateOrigin = generateOrigin;
+    }
+
+    public boolean isUnpackOverlays() {
+        return unpackOverlays;
+    }
+
+    public void setUnpackOverlays(final boolean unpackOverlays) {
+        this.unpackOverlays = unpackOverlays;
     }
 
     public List<Overlay> getOverlays()

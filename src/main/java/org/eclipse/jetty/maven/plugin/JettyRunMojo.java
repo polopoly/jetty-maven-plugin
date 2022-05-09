@@ -299,8 +299,10 @@ public class JettyRunMojo extends AbstractJettyMojo
         }
 
         //process any overlays and the war type artifacts
-        List<Overlay> overlays = getOverlays();
-        new OverlayUnpacker(project, webApp, getLog()).unpackOverlays(overlays); //this sets up the base resource collection
+        if (webApp.isUnpackOverlays()) {
+            List<Overlay> overlays = getOverlays();
+            new OverlayUnpacker(project, webApp, getLog()).unpackOverlays(overlays); //this sets up the base resource collection
+        }
 
         getLog().info("web.xml file = " + webApp.getDescriptor());
         getLog().info("Webapp directory = " + webAppSourceDirectory.getCanonicalPath());
