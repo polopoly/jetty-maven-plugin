@@ -140,7 +140,11 @@ public class WebApplicationConfigBuilder
                 SelectiveJarResource r = new SelectiveJarResource(new URL("jar:" + Resource.toURL(artifact.getFile()) + "!/"));
                 r.setIncludes(config.getIncludes());
                 r.setExcludes(config.getExcludes());
-                Overlay overlay = new Overlay(config, r);
+                // mnova: don't now why overlay were calculated with a configuration
+                // which would mean the overlay will not be unpacked, this will break
+                // the web.xml finding.
+                //Overlay overlay = new Overlay(config, r);
+                Overlay overlay = new Overlay(null, r);
                 overlays.add(overlay);
             } else if ((!Artifact.SCOPE_PROVIDED.equals(artifact.getScope()))
                     && (!Artifact.SCOPE_TEST.equals( artifact.getScope())))

@@ -455,6 +455,9 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
                 contextMap.putIfAbsent(projectId, webAppConfig);
                 subprojects.add(webAppConfig.getContextPath());
 
+                final List<Overlay> overlays = getOverlays(warPluginInfo, webAppConfig);
+                new OverlayUnpacker(subProject, webAppConfig, getLog()).unpackOverlays(overlays);
+
                 final List<File> allFiles = removeDependencyJars(webAppConfig, subProject);
 
                 getLog().info("\n=========================================================================="
@@ -705,6 +708,31 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
             return false;
         }
         return !Artifact.SCOPE_TEST.equals(artifact.getScope()) || useTestScope;
+    }
+
+    private List<Overlay> getOverlays(final WarPluginInfo warPluginInfo,
+                                      final JettyWebAppContext webAppConfig) {
+        List<Overlay> overlays = new ArrayList<>();
+        for (OverlayConfig config : warPluginInfo.getMavenWarOverlayConfigs()) {
+            //overlays can be individually skipped
+            if (config.isSkip()) {
+                continue;
+            }
+
+            //an empty overlay refers to the current project - important for ordering
+            if (config.isCurrentProject()) {
+                Overlay overlay = new Overlay(config, null);
+                overlays.add(overlay);
+            }
+        }
+        for (final Overlay overlay : webAppConfig.getOverlays()) {
+            if (overlays.stream()
+                        .map(Overlay::getResource)
+                        .noneMatch(r -> overlay.getResource().isSame(r))) {
+                overlays.add(overlay);
+            }
+        }
+        return overlays;
     }
 
     private List<Overlay> getOverlays()

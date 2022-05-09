@@ -2,6 +2,8 @@ package org.eclipse.jetty.maven.plugin.utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,37 +41,42 @@ public class OverlayUnpacker {
     public void unpackOverlays(final List<Overlay> overlays)
         throws Exception
     {
-        if (overlays == null || overlays.isEmpty())
+        if (overlays == null || overlays.isEmpty()) {
             return;
+        }
 
         List<Resource> resourceBaseCollection = new ArrayList<>();
 
-        for (Overlay o : overlays)
-        {
+        for (final Overlay o : overlays) {
             //can refer to the current project in list of overlays for ordering purposes
-            if (o.getConfig() != null && o.getConfig().isCurrentProject() && webApp.getBaseResource().exists())
-            {
+            if (o.getConfig() != null && o.getConfig().isCurrentProject() && webApp.getBaseResource().exists()) {
                 resourceBaseCollection.add(webApp.getBaseResource());
                 continue;
             }
 
             Resource unpacked = unpackOverlay(o);
-            //_unpackedOverlayResources.add(unpacked); //remember the unpacked overlays for later so we can delete the tmp files
-            resourceBaseCollection.add(unpacked); //add in the selectively unpacked overlay in the correct order to the webapps resource base
+            if (unpacked != null) {
+                //_unpackedOverlayResources.add(unpacked); //remember the unpacked overlays for later so we can delete the tmp files
+                resourceBaseCollection.add(unpacked); //add in the selectively unpacked overlay in the correct order to the webapps resource base
+                if (StringUtil.isEmpty(webApp.getDescriptor())) {
+                    final Path path = Paths.get(unpacked.getName(), "WEB-INF", "web.xml");
+                    final File f = path.toFile();
+                    if (f.exists() && f.isFile()) {
+                        getLog().debug("Set web.xml from overlay: " + f.getAbsolutePath());
+                        webApp.setDescriptor(f.getAbsolutePath());
+                    }
+                }
+            }
         }
 
-        if (!resourceBaseCollection.contains(webApp.getBaseResource()) && webApp.getBaseResource().exists())
-        {
-            if (webApp.getBaseAppFirst())
-            {
+        if (webApp.getBaseResource().exists() && !resourceBaseCollection.contains(webApp.getBaseResource())) {
+            if (webApp.getBaseAppFirst()) {
                 resourceBaseCollection.add(0, webApp.getBaseResource());
-            }
-            else
-            {
+            } else {
                 resourceBaseCollection.add(webApp.getBaseResource());
             }
         }
-        webApp.setBaseResource(new ResourceCollection(resourceBaseCollection.toArray(new Resource[resourceBaseCollection.size()])));
+        webApp.setBaseResource(new ResourceCollection(resourceBaseCollection.toArray(new Resource[] {})));
     }
 
     public Resource unpackOverlay(Overlay overlay)
