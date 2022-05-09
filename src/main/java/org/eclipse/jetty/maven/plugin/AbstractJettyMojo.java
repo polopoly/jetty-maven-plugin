@@ -188,6 +188,12 @@ public abstract class AbstractJettyMojo extends AbstractMojo
     protected String contextXml;
 
     /**
+     * Use intelliJ's "overlays" folders (which is faster than expanding a new overlay).
+     */
+    @Parameter(property = "jetty.useIntelliJOverlays", defaultValue = "true")
+    protected boolean useIntelliJOverlays;
+
+    /**
      * The maven project.
      */
     @Parameter(defaultValue = "${project}", readonly = true)

@@ -2,15 +2,19 @@ package org.eclipse.jetty.maven.plugin.utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.eclipse.jetty.maven.plugin.JettyWebAppContext;
 import org.eclipse.jetty.maven.plugin.Overlay;
+import org.eclipse.jetty.maven.plugin.OverlayConfig;
 import org.eclipse.jetty.util.StringUtil;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceCollection;
@@ -24,13 +28,16 @@ public class OverlayUnpacker {
 
     private final MavenProject project;
     private final JettyWebAppContext webApp;
+    private final boolean useIntelliJOverlays;
     private final Log log;
 
     public OverlayUnpacker(final MavenProject project,
                            final JettyWebAppContext webApp,
+                           final boolean useIntelliJOverlays,
                            final Log log) {
         this.project = project;
         this.webApp = webApp;
+        this.useIntelliJOverlays = useIntelliJOverlays;
         this.log = log;
     }
 
@@ -51,7 +58,7 @@ public class OverlayUnpacker {
             //can refer to the current project in list of overlays for ordering purposes
             if (o.getConfig() != null && o.getConfig().isCurrentProject() && webApp.getBaseResource().exists()) {
                 if (!resourceBaseCollection.contains(webApp.getBaseResource())) {
-                resourceBaseCollection.add(webApp.getBaseResource());
+                    resourceBaseCollection.add(webApp.getBaseResource());
                 }
                 // the overlay may be an overlay of a war build in the project
                 final Resource r = o.getResource();
@@ -94,11 +101,18 @@ public class OverlayUnpacker {
         webApp.setBaseResource(new ResourceCollection(resourceBaseCollection.toArray(new Resource[] {})));
     }
 
-    public Resource unpackOverlay(Overlay overlay)
+    public Resource unpackOverlay(final Overlay overlay)
         throws IOException
     {
-        if (overlay.getResource() == null)
+        if (overlay.getResource() == null) {
             return null; //nothing to unpack
+        }
+
+        // check if intelliJ overlay folder already exists
+        final Optional<Resource> intelliJOverlay = checkIntelliJOverlayFolder(overlay);
+        if (intelliJOverlay.isPresent()) {
+            return intelliJOverlay.get();
+        }
 
         //Get the name of the overlayed war and unpack it to a dir of the
         //same name in the temporary directory
@@ -129,4 +143,37 @@ public class OverlayUnpacker {
         return Resource.newResource(dir.getCanonicalPath());
     }
 
+    private Optional<Resource> checkIntelliJOverlayFolder(final Overlay overlay) {
+        final OverlayConfig config = overlay.getConfig();
+        if (config == null || !useIntelliJOverlays) {
+            return Optional.empty();
+        }
+        String name = config.getGroupId() + "." + config.getArtifactId();
+        if (!StringUtil.isEmpty(config.getVersion())) {
+            name += "-" + config.getVersion();
+        }
+        final Path overlayPath = Paths.get(project.getBasedir().getAbsolutePath(), "overlays", name);
+        if (overlayPath.toFile().exists() && overlayPath.toFile().isDirectory()) {
+            final Path infoPath = overlayPath.resolveSibling(name + ".info");
+            if (infoPath.toFile().exists() && infoPath.toFile().isFile()) {
+                try {
+                    final String infoContent = IOUtils.toString(infoPath.toUri(), StandardCharsets.UTF_8);
+                    final String[] lines = infoContent.split("\n");
+                    if (lines.length > 0) {
+                        try {
+                            final long lastModified = Long.parseLong(lines[0]);
+                            if (overlay.getResource().lastModified() <= lastModified) {
+                                return Optional.of(Resource.newResource(overlayPath.toAbsolutePath().toUri()));
+                            }
+                        } catch (NumberFormatException e) {
+                            getLog().warn("Cannot parse " + lines[0]);
+                        }
+                    }
+                } catch (IOException e) {
+                    getLog().warn("Cannot read " + infoPath);
+                }
+            }
+        }
+        return Optional.empty();
+    }
 }
