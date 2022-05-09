@@ -74,7 +74,7 @@ public class WebApplicationConfigBuilder
             final Resource baseResource = webAppConfig.getBaseResource();
             if (webAppConfig.getDescriptor() == null && baseResource != null)
             {
-                Resource r = baseResource.addPath("WEB-INF" + File.pathSeparator + "web.xml");
+                Resource r = baseResource.addPath("WEB-INF" + File.separator + "web.xml");
                 if (r.exists() && !r.isDirectory())
                 {
                     webAppConfig.setDescriptor(r.toString());
