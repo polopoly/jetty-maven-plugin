@@ -235,7 +235,7 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException
     {
-        supportedPackagings = Arrays.asList("war", "pom");
+        supportedPackaging = Arrays.asList("war", "pom");
         warPluginInfo = new WarPluginInfo(project);
         applyLoggingProperties();
         super.execute();

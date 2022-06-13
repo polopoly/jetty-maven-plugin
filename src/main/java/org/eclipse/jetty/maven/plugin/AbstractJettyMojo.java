@@ -158,14 +158,14 @@ public abstract class AbstractJettyMojo extends AbstractMojo
      * Port to listen to stop jetty on executing -DSTOP.PORT=&lt;stopPort&gt;
      * -DSTOP.KEY=&lt;stopKey&gt; -jar start.jar --stop
      */
-    @Parameter
+    @Parameter(required = true, defaultValue = "8079")
     protected int stopPort;
 
     /**
      * Key to provide when stopping jetty on executing java -DSTOP.KEY=&lt;stopKey&gt;
      * -DSTOP.PORT=&lt;stopPort&gt; -jar start.jar --stop
      */
-    @Parameter
+    @Parameter(required = true, defaultValue = "JETTYSTOP")
     protected String stopKey;
 
     /**
@@ -236,8 +236,6 @@ public abstract class AbstractJettyMojo extends AbstractMojo
      */
     protected Thread consoleScanner;
 
-    protected ServerSupport serverSupport;
-
     /**
      * <p>
      * Determines whether or not the server blocks when started. The default
@@ -258,7 +256,7 @@ public abstract class AbstractJettyMojo extends AbstractMojo
      * If your project use an other type please configure it here.
      */
     @Parameter
-    protected List<String> supportedPackagings = Collections.singletonList("war");
+    protected List<String> supportedPackaging = Collections.singletonList("war");
 
     public abstract void restartWebApp(boolean reconfigureScanner) throws Exception;
 
@@ -281,7 +279,7 @@ public abstract class AbstractJettyMojo extends AbstractMojo
 
     public boolean checkPackagingConfiguration()
     {
-        if (!supportedPackagings.contains(project.getPackaging()))
+        if (!supportedPackaging.contains(project.getPackaging()))
         {
             getLog().info(getSkipMessage("packaging type [" + project.getPackaging() + "] is unsupported"));
             return false;
