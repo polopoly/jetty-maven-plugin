@@ -457,6 +457,8 @@ public abstract class AbstractJettyMojo extends AbstractMojo
 
             getLog().info("Started Jetty Server (PID " + pid + ")");
 
+            jettyStarted();
+
             if (dumpOnStart)
             {
                 getLog().info(this.server.dump());
@@ -495,6 +497,7 @@ public abstract class AbstractJettyMojo extends AbstractMojo
             if (!nonBlocking)
             {
                 server.join();
+                jettyStopped();
             }
         }
         catch (Exception e)
@@ -508,6 +511,18 @@ public abstract class AbstractJettyMojo extends AbstractMojo
                 getLog().info("Jetty server exiting.");
             }
         }
+    }
+
+    /**
+     * This is called just after the server started.
+     */
+    protected void jettyStarted() {
+    }
+
+    /**
+     * This is called just after the server has been stopped.
+     */
+    protected void jettyStopped() {
     }
 
     public void configureMonitor()

@@ -25,9 +25,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -62,6 +64,7 @@ import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolverExcepti
 import org.eclipse.jetty.maven.plugin.utils.FilesHelper;
 import org.eclipse.jetty.maven.plugin.utils.MavenProjectHelper;
 import org.eclipse.jetty.maven.plugin.utils.OverlayUnpacker;
+import org.eclipse.jetty.maven.plugin.utils.PidUtil;
 import org.eclipse.jetty.maven.plugin.utils.WebApplicationConfigBuilder;
 import org.eclipse.jetty.maven.plugin.utils.WebApplicationScanBuilder;
 import org.eclipse.jetty.server.Handler;
@@ -227,6 +230,24 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
     @Parameter(defaultValue = "false")
     protected boolean startMainWebapp;
 
+    /**
+     * The location of the Jetty lock file.
+     */
+    @Parameter(defaultValue = "${project.build.directory}/locks/jetty.pid", required = true, readonly = true)
+    protected File jettyLock;
+
+    /**
+     * Create the jetty lock file on startup and remove it on shutdown.
+     */
+    @Parameter(defaultValue = "true")
+    protected boolean useJettyLock;
+
+    /**
+     * Max time in seconds that the plugin will wait for confirmation that jetty has stopped.
+     */
+    @Parameter(defaultValue = "30")
+    protected int stopWait;
+
     final WebApplicationScanBuilder scanBuilder = new WebApplicationScanBuilder();
     final WebApplicationConfigBuilder configBuilder = new WebApplicationConfigBuilder("com.polopoly.jetty:jetty-maven-plugin");
 
@@ -235,10 +256,44 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException
     {
+        PluginLog.setLog(getLog());
         supportedPackaging = Arrays.asList("war", "pom");
         warPluginInfo = new WarPluginInfo(project);
         applyLoggingProperties();
         super.execute();
+        if (useJettyLock) {
+            waitLockDisappear();
+        }
+    }
+
+    @Override
+    protected void jettyStarted() {
+        if (useJettyLock) {
+            createLockFile();
+
+            getLog().info("Installing Jetty shutdown hook");
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                getLog().info("Jetty shutdown hook");
+                long elapse = 3;
+                while (elapse > 0 || server.isRunning() || server.isStopping()) {
+                    try {
+                        Thread.sleep(1000L);
+                    } catch (InterruptedException ignore) {
+                        Thread.currentThread().interrupt();
+                    }
+                    elapse -= 1;
+                }
+                getLog().info("Jetty STOPPED!!!");
+                removeLockFile();
+            }));
+        }
+    }
+
+    @Override
+    protected void jettyStopped() {
+        if (useJettyLock) {
+            removeLockFile();
+        }
     }
 
     /**
@@ -1040,6 +1095,63 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
         }
 
         return false;
+    }
+
+    private void createLockFile() {
+        removeLockFile();
+        final File parentFile = jettyLock.getParentFile();
+        if (!parentFile.exists()) {
+            if (!parentFile.mkdirs()) {
+                getLog().error("Cannot create " + parentFile);
+            }
+        }
+        final String jettyPid = String.format("%d", PidUtil.getMyPid());
+        try {
+            Files.write(jettyLock.toPath(), jettyPid.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE);
+            getLog().debug("Created " + jettyLock);
+        } catch (IOException e) {
+            getLog().error("Cannot write to " + jettyLock, e);
+        }
+    }
+
+    private void removeLockFile() {
+        if (jettyLock.exists()) {
+            if (!jettyLock.delete()) {
+                getLog().error("Cannot remove " + jettyLock);
+            } else {
+                getLog().debug("Removed " + jettyLock);
+            }
+        }
+    }
+
+    protected void waitLockDisappear() {
+        int maxTime = stopWait;
+        getLog().info(String.format(
+            "Wait for %s to disappear (for max %d seconds)",
+            jettyLock,
+            stopWait
+        ));
+        while (jettyLock.exists() && maxTime > 0) {
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException ignore) {
+                Thread.currentThread().interrupt();
+            }
+            getLog().debug("Wait for " + jettyLock + " to disappear");
+            maxTime -= 1;
+        }
+        if (jettyLock.exists()) {
+            getLog().error(String.format(
+                "Waited for %d seconds but the lock file %s still exists",
+                stopWait,
+                jettyLock
+            ));
+        } else {
+            getLog().info(String.format(
+                "Jetty stopped in %d seconds",
+                (stopWait - maxTime)
+            ));
+        }
     }
 
 }
