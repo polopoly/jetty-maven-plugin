@@ -15,7 +15,7 @@
     <compiler.target>8</compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <jetty.version>9.4.46.v20220331</jetty.version>
+    <jetty.version>9.4.51.v20230217</jetty.version>
 
     <maven.version>3.8.4</maven.version>
     <maven.compiler.plugin.version>3.10.1</maven.compiler.plugin.version>
