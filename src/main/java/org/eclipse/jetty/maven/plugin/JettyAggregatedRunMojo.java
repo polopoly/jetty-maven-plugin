@@ -69,6 +69,7 @@ import org.eclipse.jetty.maven.plugin.utils.WebApplicationConfigBuilder;
 import org.eclipse.jetty.maven.plugin.utils.WebApplicationScanBuilder;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ConditionalContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.IncludeExcludeSet;
 import org.eclipse.jetty.util.Scanner;
@@ -209,6 +210,13 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
      */
     @Parameter
     private ContextHandler[] externalArtifactContextHandlers;
+
+    /**
+     * List of conditional contexts to set up.
+     * Optional.
+     */
+    @Parameter
+    protected ConditionalContextHandler[] conditionalContextHandlers;
 
     /**
      * Configure java util logging properties. This parameter has precedence
@@ -578,9 +586,8 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
             }
         }
 
-        if (externalArtifactContextHandlers != null) {
-            configureWarArtifactsForExtraContextHandlers(subprojects);
-        }
+        configureWarArtifactsForExtraContextHandlers(subprojects);
+        configureWarArtifactsForConditionalContextHandlers(subprojects);
 
         getLog().info("Starting scanner at interval of " + getScanIntervalSeconds() + " seconds.");
     }
@@ -991,26 +998,34 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
         return allFiles;
     }
 
-    private void configureWarArtifactsForExtraContextHandlers(final Set<String> skipContexts)
-        throws Exception
-    {
-        for (Handler contextHandler : externalArtifactContextHandlers) {
-            if (contextHandler instanceof org.mortbay.jetty.plugin.JettyWebAppContext) {
-                getLog().warn("This class " + contextHandler.getClass().getName() + " is deprecated! You should " +
-                    "use " + JettyWebAppContext.class.getName());
+    private void configureWarArtifactsForExtraContextHandlers(final Set<String> skipContexts) {
+        if (externalArtifactContextHandlers != null) {
+            for (Handler contextHandler : externalArtifactContextHandlers) {
+                configureWarArtifactsContextHandlers(skipContexts, contextHandler);
             }
-            if (contextHandler instanceof JettyWebAppContext) {
-                JettyWebAppContext jettyContext = (JettyWebAppContext) contextHandler;
+        }
+    }
 
-                ArtifactData warArtifact = jettyContext.getWarArtifact();
+    private void configureWarArtifactsContextHandlers(final Set<String> skipContexts,
+                                                      final Handler contextHandler)
+    {
+        if (contextHandler instanceof org.mortbay.jetty.plugin.JettyWebAppContext) {
+            getLog().warn("This class " + contextHandler.getClass().getName() + " is deprecated! You should " +
+                "use " + JettyWebAppContext.class.getName());
+        }
+        if (contextHandler instanceof JettyWebAppContext) {
+            JettyWebAppContext jettyContext = (JettyWebAppContext) contextHandler;
 
-                if (warArtifact != null) {
-                    if (skipContexts.contains(jettyContext.getContextPath())) {
-                        getLog().info(String.format("Not deploying '%s' for context '%s' since it is already handled by sub-project",
-                            warArtifact, jettyContext.getContextPath()));
-                        continue;
-                    }
+            ArtifactData warArtifact = jettyContext.getWarArtifact();
 
+            if (warArtifact != null) {
+                if (skipContexts.contains(jettyContext.getContextPath())) {
+                    getLog().info(String.format("Not deploying '%s' for context '%s' since it is already handled by sub-project",
+                        warArtifact, jettyContext.getContextPath()));
+                    return;
+                }
+
+                try {
                     final Artifact artifact = resolveArtifact(
                         warArtifact.groupId,
                         warArtifact.artifactId,
@@ -1023,9 +1038,17 @@ public class JettyAggregatedRunMojo extends AbstractJettyMojo
                     addWebApplication(jettyContext);
 
                     getLog().info(String.format("Deploying '%s' for context '%s'", warFile.getAbsolutePath(), jettyContext.getContextPath()));
+                } catch (Exception e) {
+                    throw new RuntimeException("Error while processing " + jettyContext.getContextPath(), e);
                 }
             }
         }
+    }
+
+    private void configureWarArtifactsForConditionalContextHandlers(final Set<String> skipContexts) {
+        processConditionalContentHandlers(conditionalContextHandlers, contextHandler -> {
+            configureWarArtifactsContextHandlers(skipContexts, contextHandler);
+        });
     }
 
     private MavenProject getLocalDownstreamProjectForDependency(final Artifact artifact,

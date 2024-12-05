@@ -33,6 +33,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
@@ -47,6 +48,7 @@ import org.eclipse.jetty.security.LoginService;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ShutdownMonitor;
+import org.eclipse.jetty.server.handler.ConditionalContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
@@ -84,6 +86,13 @@ public abstract class AbstractJettyMojo extends AbstractMojo
      */
     @Parameter
     protected ContextHandler[] contextHandlers;
+
+    /**
+     * List of conditional contexts to set up.
+     * Optional.
+     */
+    @Parameter
+    protected ConditionalContextHandler[] conditionalContextHandlers;
 
     /**
      * List of security realms to set up. Consider using instead
@@ -388,6 +397,39 @@ public abstract class AbstractJettyMojo extends AbstractMojo
         for (int i = 0; (this.contextHandlers != null) && (i < this.contextHandlers.length); i++)
         {
             contexts.addHandler(this.contextHandlers[i]);
+        }
+
+        processConditionalContentHandlers(this.conditionalContextHandlers, contexts::addHandler);
+    }
+
+    protected void processConditionalContentHandlers(final ConditionalContextHandler[] conditionalContextHandlers,
+                                                     final Consumer<ContextHandler> consumer) {
+        if (conditionalContextHandlers != null) {
+            for (final ConditionalContextHandler conditionalContextHandler : conditionalContextHandlers) {
+                final String propertyName = conditionalContextHandler.getPropertyName();
+                if (StringUtil.isEmpty(propertyName)) {
+                    continue;
+                }
+                final String realPropertyName;
+                final boolean expected;
+                if (propertyName.startsWith("!")) {
+                    realPropertyName = propertyName.substring(1);
+                    expected = true;
+                } else {
+                    realPropertyName = propertyName;
+                    expected = false;
+                }
+                final String propertyValue = System.getProperty(realPropertyName);
+                final boolean enabled = (expected == (propertyValue == null));
+                getLog().info("Conditional property name: " + propertyName + " -> " + propertyValue + " -> " + enabled);
+                if (enabled) {
+                    if (conditionalContextHandler.getContextHandler() != null) {
+                        consumer.accept(conditionalContextHandler.getContextHandler());
+                    } else {
+                        getLog().warn("No context handler defined for property: " + propertyName);
+                    }
+                }
+            }
         }
     }
 
